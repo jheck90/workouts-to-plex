@@ -34,7 +34,7 @@ job "workouts-to-plex" {
       }
 
       resources {
-        cpu        = 500
+        cpu        = 4000
         memory     = 512
         memory_max = 2048
       }
