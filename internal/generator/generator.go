@@ -61,15 +61,16 @@ type Exercise struct {
 // --- Template data ---
 
 type templateData struct {
-	Name     string
-	Subtitle string
-	Notes    string
-	Width    int
-	Height   int
-	Columns  int
-	Warmup   []string
-	Heavy    *Heavy
-	Rounds   []Round
+	Name      string
+	Subtitle  string
+	Notes     string
+	Width     int
+	Height    int
+	Columns   int
+	Warmup    []string
+	Heavy     *Heavy
+	Rounds    []Round
+	Highlight string // "warmup", "1", "2", "3", ... — active slide
 }
 
 // --- Generator ---
@@ -108,46 +109,52 @@ func LoadConfig(path string) (*Config, error) {
 	return &cfg, nil
 }
 
-// GenerateResult pairs a generated PNG path with its source Workout.
-// Regenerated is true when the config changed and outputs were rebuilt.
+// GenerateResult holds the ordered frame PNGs for one workout.
+// Regenerated is true when the config changed and frames were rebuilt.
 type GenerateResult struct {
-	PNGPath     string
+	PNGPaths    []string // ordered: warmup, min1, min2, ...
 	Workout     Workout
 	Regenerated bool
 }
 
-// GenerateAll renders every workout in the config to a PNG in outputDir.
+// GenerateAll renders every workout's frame sequence to the input dir.
 func (g *Generator) GenerateAll(cfg *Config) ([]GenerateResult, error) {
 	var results []GenerateResult
 	for _, w := range cfg.Workouts {
-		path, regen, err := g.Generate(cfg.Settings, w)
+		paths, regen, err := g.GenerateFrames(cfg.Settings, w)
 		if err != nil {
 			log.Printf("failed to generate %q: %v", w.Name, err)
 			continue
 		}
-		results = append(results, GenerateResult{PNGPath: path, Workout: w, Regenerated: regen})
+		results = append(results, GenerateResult{PNGPaths: paths, Workout: w, Regenerated: regen})
 	}
 	return results, nil
 }
 
-// Generate renders one workout card to a PNG.
-// Returns the PNG path, whether it was regenerated, and any error.
-func (g *Generator) Generate(s Settings, w Workout) (string, bool, error) {
+// GenerateFrames produces one PNG per slide (warmup + each minute), each with a
+// different section highlighted. Returns frame paths in display order.
+func (g *Generator) GenerateFrames(s Settings, w Workout) ([]string, bool, error) {
 	slug := slugify(w.Name)
-	htmlPath := filepath.Join(os.TempDir(), slug+".html")
-	pngPath := filepath.Join(g.outputDir, slug+".png")
 	hashPath := filepath.Join(g.outputDir, slug+".sha256")
-
 	hash := workoutHash(s, w)
 
-	// Check if existing PNG matches the current config hash
+	highlights := frameHighlights(w)
+
+	// Check stored hash — if unchanged, return existing paths without regenerating
 	if storedHash, err := os.ReadFile(hashPath); err == nil {
 		if strings.TrimSpace(string(storedHash)) == hash {
 			log.Printf("skipping %q — config unchanged", w.Name)
-			return pngPath, false, nil
+			paths := make([]string, len(highlights))
+			for i, h := range highlights {
+				paths[i] = filepath.Join(g.outputDir, slug+"_"+h+".png")
+			}
+			return paths, false, nil
 		}
-		log.Printf("config changed for %q — regenerating", w.Name)
-		os.Remove(pngPath)
+		log.Printf("config changed for %q — regenerating all frames", w.Name)
+		// Remove stale frames
+		for _, h := range highlights {
+			os.Remove(filepath.Join(g.outputDir, slug+"_"+h+".png"))
+		}
 	}
 
 	roundCount := len(w.Rounds)
@@ -155,29 +162,51 @@ func (g *Generator) Generate(s Settings, w Workout) (string, bool, error) {
 		roundCount++
 	}
 
+	var paths []string
+	for _, highlight := range highlights {
+		path, err := g.renderFrame(s, w, slug, highlight, roundCount)
+		if err != nil {
+			return nil, false, err
+		}
+		paths = append(paths, path)
+	}
+
+	if err := os.WriteFile(hashPath, []byte(hash), 0644); err != nil {
+		log.Printf("warning: could not save hash for %q: %v", w.Name, err)
+	}
+
+	return paths, true, nil
+}
+
+// renderFrame renders one PNG with the given section highlighted.
+func (g *Generator) renderFrame(s Settings, w Workout, slug, highlight string, roundCount int) (string, error) {
+	pngPath := filepath.Join(g.outputDir, slug+"_"+highlight+".png")
+	htmlPath := filepath.Join(os.TempDir(), slug+"_"+highlight+".html")
+
 	data := templateData{
-		Name:     w.Name,
-		Subtitle: w.Subtitle,
-		Notes:    w.Notes,
-		Width:    s.Width,
-		Height:   s.Height,
-		Columns:  columns(roundCount),
-		Warmup:   w.Warmup,
-		Heavy:    w.Heavy,
-		Rounds:   w.Rounds,
+		Name:      w.Name,
+		Subtitle:  w.Subtitle,
+		Notes:     w.Notes,
+		Width:     s.Width,
+		Height:    s.Height,
+		Columns:   columns(roundCount),
+		Warmup:    w.Warmup,
+		Heavy:     w.Heavy,
+		Rounds:    w.Rounds,
+		Highlight: highlight,
 	}
 
 	f, err := os.Create(htmlPath)
 	if err != nil {
-		return "", false, fmt.Errorf("could not create html file: %w", err)
+		return "", fmt.Errorf("could not create html file: %w", err)
 	}
 	if err := g.tmpl.Execute(f, data); err != nil {
 		f.Close()
-		return "", false, fmt.Errorf("template render failed: %w", err)
+		return "", fmt.Errorf("template render failed: %w", err)
 	}
 	f.Close()
 
-	log.Printf("screenshotting %q -> %s", w.Name, filepath.Base(pngPath))
+	log.Printf("screenshotting %q [%s] -> %s", w.Name, highlight, filepath.Base(pngPath))
 
 	cmd := exec.Command("chromium-browser",
 		"--headless",
@@ -192,16 +221,25 @@ func (g *Generator) Generate(s Settings, w Workout) (string, bool, error) {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return "", false, fmt.Errorf("chromium screenshot failed: %w", err)
+		return "", fmt.Errorf("chromium screenshot failed for frame %s: %w", highlight, err)
 	}
 
-	// Save hash so next run can detect changes
-	if err := os.WriteFile(hashPath, []byte(hash), 0644); err != nil {
-		log.Printf("warning: could not save hash for %q: %v", w.Name, err)
-	}
+	return pngPath, nil
+}
 
-	log.Printf("generated: %s", pngPath)
-	return pngPath, true, nil
+// frameHighlights returns the ordered list of highlight keys for a workout.
+func frameHighlights(w Workout) []string {
+	var h []string
+	if len(w.Warmup) > 0 {
+		h = append(h, "warmup")
+	}
+	if w.Heavy != nil {
+		h = append(h, "1")
+	}
+	for _, r := range w.Rounds {
+		h = append(h, fmt.Sprintf("%d", r.Minute))
+	}
+	return h
 }
 
 // workoutHash returns a stable SHA256 of the workout config + settings.

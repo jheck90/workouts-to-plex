@@ -120,6 +120,91 @@ func (c *Converter) encodeCycle(inputPath, outputPath string, timerSeconds int) 
 	return nil
 }
 
+// ConvertFramesTo encodes each frame as a timerSeconds-long cycle, then
+// concatenates the frame sequence repeatedly to fill totalMinutes.
+func (c *Converter) ConvertFramesTo(inputPaths []string, outputPath string, timerSeconds, totalMinutes int) error {
+	if len(inputPaths) == 0 {
+		return fmt.Errorf("no input frames provided")
+	}
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+		return fmt.Errorf("failed to create output dir: %w", err)
+	}
+	if _, err := os.Stat(outputPath); err == nil {
+		log.Printf("skipping %s — output already exists", filepath.Base(outputPath))
+		return nil
+	}
+
+	// Encode each frame to a cycle file.
+	var cycleFiles []string
+	for _, p := range inputPaths {
+		cycleFile := strings.TrimSuffix(outputPath, ".mp4") + "_" + strings.TrimSuffix(filepath.Base(p), filepath.Ext(p)) + ".cycle.mp4"
+		if err := c.encodeCycle(p, cycleFile, timerSeconds); err != nil {
+			for _, cf := range cycleFiles {
+				os.Remove(cf)
+			}
+			return err
+		}
+		cycleFiles = append(cycleFiles, cycleFile)
+	}
+	defer func() {
+		for _, cf := range cycleFiles {
+			os.Remove(cf)
+		}
+	}()
+
+	// Each pass through all frames takes len(frames)*timerSeconds seconds.
+	totalSeconds := totalMinutes * 60
+	frameSetDuration := len(inputPaths) * timerSeconds
+	passes := totalSeconds / frameSetDuration
+	if passes < 1 {
+		passes = 1
+	}
+
+	if err := c.loopFrames(cycleFiles, outputPath, passes); err != nil {
+		os.Remove(outputPath)
+		return err
+	}
+
+	log.Printf("done: %s", outputPath)
+	return nil
+}
+
+// loopFrames stream-copies the cycle files in sequence, repeated `passes` times.
+func (c *Converter) loopFrames(cycleFiles []string, outputPath string, passes int) error {
+	log.Printf("concatenating %d frames × %d passes -> %s", len(cycleFiles), passes, filepath.Base(outputPath))
+
+	concatFile := outputPath + ".txt"
+	defer os.Remove(concatFile)
+
+	var sb strings.Builder
+	for i := 0; i < passes; i++ {
+		for _, cf := range cycleFiles {
+			fmt.Fprintf(&sb, "file '%s'\n", cf)
+		}
+	}
+	if err := os.WriteFile(concatFile, []byte(sb.String()), 0644); err != nil {
+		return fmt.Errorf("failed to write concat list: %w", err)
+	}
+
+	args := []string{
+		"-y",
+		"-f", "concat",
+		"-safe", "0",
+		"-i", concatFile,
+		"-c", "copy",
+		"-movflags", "+faststart",
+		outputPath,
+	}
+
+	cmd := exec.Command("ffmpeg", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("concat frames failed: %w", err)
+	}
+	return nil
+}
+
 // loopCycle stream-copies the cycle file N times into outputPath — no re-encode.
 func (c *Converter) loopCycle(cycleFile, outputPath string, cycles int) error {
 	log.Printf("looping cycle %dx -> %s", cycles, filepath.Base(outputPath))
