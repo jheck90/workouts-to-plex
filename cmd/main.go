@@ -95,7 +95,11 @@ func runGenerator(configPath, inputDir, outputDir string) error {
 		if timer == 0 {
 			timer = 60
 		}
-		if err := conv.ConvertTo(r.PNGPath, outPath, timer); err != nil {
+		totalMinutes := r.Workout.TotalMinutes
+		if totalMinutes == 0 {
+			totalMinutes = 60
+		}
+		if err := conv.ConvertTo(r.PNGPath, outPath, timer, totalMinutes); err != nil {
 			log.Printf("convert error for %s: %v", r.PNGPath, err)
 		}
 	}

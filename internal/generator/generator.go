@@ -30,6 +30,7 @@ type Workout struct {
 	Category     string  `yaml:"category"`
 	Episode      int     `yaml:"episode"`
 	TimerSeconds int     `yaml:"timer_seconds"`
+	TotalMinutes int     `yaml:"total_minutes"`
 	Theme        string  `yaml:"theme"`
 	Rounds       []Round `yaml:"rounds"`
 	Notes        string  `yaml:"notes"`

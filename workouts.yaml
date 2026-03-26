@@ -15,6 +15,7 @@ workouts:
     category: "EMOM"
     episode: 1
     timer_seconds: 60
+    total_minutes: 60
     theme: dark
     rounds:
       - minute: 1
