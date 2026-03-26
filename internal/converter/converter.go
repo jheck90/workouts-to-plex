@@ -73,6 +73,7 @@ func (c *Converter) ConvertWithTimer(inputPath string, timerSeconds int) error {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
+		os.Remove(outputPath) // clean up partial file so next run retries
 		return fmt.Errorf("ffmpeg failed for %s: %w", inputPath, err)
 	}
 
