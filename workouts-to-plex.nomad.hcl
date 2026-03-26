@@ -10,11 +10,16 @@ job "workouts-to-plex" {
     task "workouts-to-plex" {
       driver = "docker"
 
+      template {
+        data        = file("workouts.yaml")
+        destination = "local/workouts.yaml"
+      }
+
       config {
         image = "jheck90/workouts-to-plex:latest"
 
         volumes = [
-          "/mnt/nfs-share/nomad/workouts-to-plex:/config",
+          "local/workouts.yaml:/config/workouts.yaml",
           "/mnt/nfs-share/nomad/workouts-to-plex/images:/input",
           "/mnt/nfs-share/media/workouts:/output",
         ]
