@@ -1,0 +1,35 @@
+# workouts-to-plex prompt file
+# Each entry generates one HTML card → PNG → MP4 in your Plex library.
+#
+# width/height: output image resolution (1920x1080 = 1080p, 3840x2160 = 4K)
+# timer_seconds: countdown duration; for EMOM this should always be 60
+# loop: if true, the video will loop continuously in Plex (set timer_seconds to 60 for EMOM)
+
+settings:
+  width: 1920
+  height: 1080
+
+workouts:
+  - name: "20 Min EMOM"
+    subtitle: "Every Minute On the Minute"
+    timer_seconds: 60
+    theme: dark
+    rounds:
+      - minute: 1
+        exercises:
+          - movement: "Burpees"
+            reps: 10
+      - minute: 2
+        exercises:
+          - movement: "Air Squats"
+            reps: 15
+      - minute: 3
+        exercises:
+          - movement: "Push Ups"
+            reps: 12
+      - minute: 4
+        exercises:
+          - movement: "Mountain Climbers"
+            reps: 20
+            note: "each leg"
+    notes: "Rest for remaining time each minute. Repeat rounds 1–4 for 20 minutes."

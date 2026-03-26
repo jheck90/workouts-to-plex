@@ -15,16 +15,14 @@ var supportedExtensions = map[string]bool{
 	".jpeg": true,
 }
 
+const defaultTimer = 60
+
 type Converter struct {
-	outputDir    string
-	timerSeconds int
+	outputDir string
 }
 
-func New(outputDir string, timerSeconds int) *Converter {
-	return &Converter{
-		outputDir:    outputDir,
-		timerSeconds: timerSeconds,
-	}
+func New(outputDir string) *Converter {
+	return &Converter{outputDir: outputDir}
 }
 
 func (c *Converter) IsSupported(path string) bool {
@@ -32,7 +30,13 @@ func (c *Converter) IsSupported(path string) bool {
 	return supportedExtensions[ext]
 }
 
+// Convert uses the default 60s timer.
 func (c *Converter) Convert(inputPath string) error {
+	return c.ConvertWithTimer(inputPath, defaultTimer)
+}
+
+// ConvertWithTimer uses a caller-supplied timer duration.
+func (c *Converter) ConvertWithTimer(inputPath string, timerSeconds int) error {
 	base := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
 	outputPath := filepath.Join(c.outputDir, base+".mp4")
 
@@ -41,7 +45,7 @@ func (c *Converter) Convert(inputPath string) error {
 		return nil
 	}
 
-	log.Printf("converting %s -> %s (%ds timer)", filepath.Base(inputPath), filepath.Base(outputPath), c.timerSeconds)
+	log.Printf("converting %s -> %s (%ds timer)", filepath.Base(inputPath), filepath.Base(outputPath), timerSeconds)
 
 	timerExpr := fmt.Sprintf(
 		"drawtext=fontfile=/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf:"+
@@ -49,7 +53,7 @@ func (c *Converter) Convert(inputPath string) error {
 			"box=1:boxcolor=black@0.6:boxborderw=10:"+
 			"text='%%{eif\\:%d-t\\:d}':"+
 			"x=w-tw-30:y=h-th-30",
-		c.timerSeconds,
+		timerSeconds,
 	)
 
 	args := []string{
@@ -57,7 +61,7 @@ func (c *Converter) Convert(inputPath string) error {
 		"-loop", "1",
 		"-i", inputPath,
 		"-vf", timerExpr,
-		"-t", fmt.Sprintf("%d", c.timerSeconds),
+		"-t", fmt.Sprintf("%d", timerSeconds),
 		"-c:v", "libx264",
 		"-pix_fmt", "yuv420p",
 		"-r", "1", // 1 fps — static image, saves space

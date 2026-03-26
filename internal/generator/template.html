@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: {{.Width}}px;
+    height: {{.Height}}px;
+    background: #0f0f0f;
+    font-family: 'Arial Black', 'Helvetica Neue', sans-serif;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 60px 80px;
+    background: linear-gradient(145deg, #141414 0%, #1a1a2e 100%);
+    border: 1px solid #2a2a2a;
+    position: relative;
+  }
+
+  .accent-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: linear-gradient(90deg, #e63946, #f4a261, #2a9d8f);
+  }
+
+  .header {
+    margin-bottom: 40px;
+    border-bottom: 1px solid #2a2a2a;
+    padding-bottom: 30px;
+  }
+
+  .workout-type {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: #e63946;
+    margin-bottom: 10px;
+  }
+
+  .workout-name {
+    font-size: 72px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -2px;
+    color: #ffffff;
+  }
+
+  .rounds-grid {
+    display: grid;
+    grid-template-columns: repeat({{.Columns}}, 1fr);
+    gap: 24px;
+    flex: 1;
+    align-content: start;
+  }
+
+  .round {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    padding: 24px 28px;
+    position: relative;
+  }
+
+  .round-label {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 6px;
+  }
+
+  .round-number {
+    font-size: 48px;
+    font-weight: 900;
+    color: #e63946;
+    line-height: 1;
+    margin-bottom: 14px;
+  }
+
+  .exercise {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .exercise-reps {
+    font-size: 32px;
+    font-weight: 900;
+    color: #f4a261;
+    min-width: 48px;
+    text-align: right;
+  }
+
+  .exercise-name {
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  .exercise-note {
+    font-size: 16px;
+    font-weight: 400;
+    color: #888;
+    margin-left: 58px;
+    margin-top: -2px;
+  }
+
+  .footer {
+    margin-top: 30px;
+    padding-top: 24px;
+    border-top: 1px solid #2a2a2a;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .notes {
+    font-size: 20px;
+    color: #888;
+    font-weight: 400;
+    max-width: 80%;
+    line-height: 1.5;
+  }
+
+  .timer-hint {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #2a9d8f;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="accent-bar"></div>
+
+  <div class="header">
+    <div class="workout-type">{{.Subtitle}}</div>
+    <div class="workout-name">{{.Name}}</div>
+  </div>
+
+  <div class="rounds-grid">
+    {{range .Rounds}}
+    <div class="round">
+      <div class="round-label">Minute</div>
+      <div class="round-number">{{.Minute}}</div>
+      {{range .Exercises}}
+      <div class="exercise">
+        <div class="exercise-reps">{{.Reps}}</div>
+        <div class="exercise-name">{{.Movement}}</div>
+      </div>
+      {{if .Note}}<div class="exercise-note">{{.Note}}</div>{{end}}
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+
+  <div class="footer">
+    <div class="notes">{{.Notes}}</div>
+    <div class="timer-hint">60s timer</div>
+  </div>
+</div>
+</body>
+</html>

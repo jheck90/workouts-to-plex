@@ -2,8 +2,7 @@ services:
   workouts-to-plex:
     build: .
     restart: unless-stopped
-    environment:
-      - TIMER_SECONDS=60   # countdown duration in seconds
     volumes:
-      - ./images:/input    # drop workout images here
-      - ./plex:/output     # point Plex library at this directory
+      - ./workouts.yaml:/config/workouts.yaml  # workout definitions
+      - ./images:/input                         # generated PNGs land here (intermediate)
+      - ./plex:/output                          # point Plex library at this directory

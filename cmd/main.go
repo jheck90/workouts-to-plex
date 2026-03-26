@@ -4,28 +4,36 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/jheck90/workouts-to-plex/internal/converter"
+	"github.com/jheck90/workouts-to-plex/internal/generator"
 )
 
 func main() {
+	configPath := getEnv("CONFIG_PATH", "/config/workouts.yaml")
 	inputDir := getEnv("INPUT_DIR", "/input")
 	outputDir := getEnv("OUTPUT_DIR", "/output")
-	timerSeconds, _ := strconv.Atoi(getEnv("TIMER_SECONDS", "60"))
-
-	conv := converter.New(outputDir, timerSeconds)
 
 	log.Printf("workouts-to-plex starting")
+	log.Printf("  config: %s", configPath)
 	log.Printf("  input:  %s", inputDir)
 	log.Printf("  output: %s", outputDir)
-	log.Printf("  timer:  %ds", timerSeconds)
 
-	// Process any images already in the input directory on startup
+	// --- Generate images from workouts.yaml ---
+	if _, err := os.Stat(configPath); err == nil {
+		if err := runGenerator(configPath, inputDir, outputDir); err != nil {
+			log.Printf("generator error: %v", err)
+		}
+	} else {
+		log.Printf("no config found at %s, skipping generation step", configPath)
+	}
+
+	// --- Convert any images (pre-existing + newly dropped) to video ---
+	conv := converter.New(outputDir)
+
 	processExisting(inputDir, conv)
 
-	// Watch for new files
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatalf("failed to create watcher: %v", err)
@@ -47,7 +55,7 @@ func main() {
 			if event.Has(fsnotify.Create) || event.Has(fsnotify.Write) {
 				if conv.IsSupported(event.Name) {
 					if err := conv.Convert(event.Name); err != nil {
-						log.Printf("error: %v", err)
+						log.Printf("convert error: %v", err)
 					}
 				}
 			}
@@ -58,6 +66,41 @@ func main() {
 			log.Printf("watcher error: %v", err)
 		}
 	}
+}
+
+func runGenerator(configPath, inputDir, outputDir string) error {
+	cfg, err := generator.LoadConfig(configPath)
+	if err != nil {
+		return err
+	}
+
+	gen, err := generator.New(inputDir)
+	if err != nil {
+		return err
+	}
+
+	conv := converter.New(outputDir)
+
+	pngs, err := gen.GenerateAll(cfg)
+	if err != nil {
+		return err
+	}
+
+	for _, png := range pngs {
+		// Find the timer for this workout
+		timerSeconds := 60
+		slug := slugFromPath(png)
+		for _, w := range cfg.Workouts {
+			if generator.Slugify(w.Name) == slug {
+				timerSeconds = w.TimerSeconds
+				break
+			}
+		}
+		if err := conv.ConvertWithTimer(png, timerSeconds); err != nil {
+			log.Printf("convert error for %s: %v", png, err)
+		}
+	}
+	return nil
 }
 
 func processExisting(dir string, conv *converter.Converter) {
@@ -77,6 +120,12 @@ func processExisting(dir string, conv *converter.Converter) {
 			}
 		}
 	}
+}
+
+func slugFromPath(p string) string {
+	base := filepath.Base(p)
+	ext := filepath.Ext(base)
+	return base[:len(base)-len(ext)]
 }
 
 func getEnv(key, fallback string) string {

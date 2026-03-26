@@ -8,17 +8,26 @@ RUN go build -o workouts-to-plex ./cmd/main.go
 
 FROM alpine:3.19
 
-RUN apk add --no-cache ffmpeg font-dejavu
+RUN apk add --no-cache \
+    ffmpeg \
+    font-dejavu \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
 
 WORKDIR /app
 COPY --from=builder /app/workouts-to-plex .
+COPY internal/generator/template.html /app/template.html
 
-RUN mkdir -p /input /output
+RUN mkdir -p /input /output /config
 
 ENV INPUT_DIR=/input
 ENV OUTPUT_DIR=/output
-ENV TIMER_SECONDS=60
+ENV CONFIG_PATH=/config/workouts.yaml
 
-VOLUME ["/input", "/output"]
+VOLUME ["/input", "/output", "/config"]
 
 CMD ["./workouts-to-plex"]
