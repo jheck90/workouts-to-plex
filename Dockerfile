@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -22,12 +22,12 @@ WORKDIR /app
 COPY --from=builder /app/workouts-to-plex .
 COPY internal/generator/template.html /app/template.html
 
-RUN mkdir -p /input /output /config
+RUN mkdir -p /input /output
 
 ENV INPUT_DIR=/input
 ENV OUTPUT_DIR=/output
-ENV CONFIG_PATH=/config/workouts.yaml
+ENV CONFIG_PATH=/workouts.yaml
 
-VOLUME ["/input", "/output", "/config"]
+VOLUME ["/input", "/output"]
 
 CMD ["./workouts-to-plex"]
