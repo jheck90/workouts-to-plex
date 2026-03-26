@@ -22,7 +22,7 @@
     padding: 52px 72px 40px;
     background: linear-gradient(145deg, #141414 0%, #1a1a2e 100%);
     position: relative;
-    gap: 24px;
+    gap: 20px;
   }
 
   .accent-bar {
@@ -58,37 +58,38 @@
     padding-bottom: 6px;
   }
 
-  /* ── Warmup + Heavy row ── */
-  .meta-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+  /* ── Warmup strip ── */
+  .warmup-strip {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    background: rgba(42,157,143,0.07);
+    border: 1px solid rgba(42,157,143,0.2);
+    border-radius: 10px;
+    padding: 14px 24px;
   }
 
-  .section-label {
+  .warmup-label {
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 5px;
     text-transform: uppercase;
-    margin-bottom: 10px;
+    color: #2a9d8f;
+    white-space: nowrap;
   }
 
-  .warmup-box {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid #2a2a2a;
-    border-radius: 10px;
-    padding: 18px 22px;
+  .warmup-items {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
   }
-
-  .warmup-box .section-label { color: #2a9d8f; }
 
   .warmup-item {
-    font-size: 19px;
+    font-size: 18px;
     font-weight: 400;
-    color: #ccc;
-    line-height: 1.6;
-    padding-left: 14px;
+    color: #aaa;
     position: relative;
+    padding-left: 14px;
   }
 
   .warmup-item::before {
@@ -99,40 +100,7 @@
     font-weight: 900;
   }
 
-  .heavy-box {
-    background: rgba(230,57,70,0.07);
-    border: 1px solid rgba(230,57,70,0.3);
-    border-radius: 10px;
-    padding: 18px 22px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .heavy-box .section-label { color: #e63946; }
-
-  .heavy-movement {
-    font-size: 36px;
-    font-weight: 900;
-    color: #ffffff;
-    line-height: 1;
-    margin-bottom: 8px;
-  }
-
-  .heavy-scheme {
-    font-size: 28px;
-    font-weight: 700;
-    color: #f4a261;
-    margin-bottom: 6px;
-  }
-
-  .heavy-note {
-    font-size: 17px;
-    font-weight: 400;
-    color: #888;
-  }
-
-  /* ── EMOM rounds ── */
+  /* ── Rounds grid ── */
   .rounds-grid {
     display: grid;
     grid-template-columns: repeat({{.Columns}}, 1fr);
@@ -144,7 +112,15 @@
     background: rgba(255,255,255,0.04);
     border: 1px solid #2a2a2a;
     border-radius: 10px;
-    padding: 18px 22px;
+    padding: 20px 22px;
+  }
+
+  /* Heavy/Strength round — Minute 1 */
+  .round-heavy {
+    background: rgba(230,57,70,0.07);
+    border: 1px solid rgba(230,57,70,0.35);
+    border-radius: 10px;
+    padding: 20px 22px;
   }
 
   .round-label {
@@ -154,6 +130,10 @@
     text-transform: uppercase;
     color: #444;
     margin-bottom: 4px;
+  }
+
+  .round-heavy .round-label {
+    color: #e63946;
   }
 
   .round-number {
@@ -185,11 +165,20 @@
     color: #ffffff;
   }
 
+  /* Heavy exercise name is bigger */
+  .round-heavy .exercise-name {
+    font-size: 28px;
+  }
+
   .exercise-note {
     font-size: 14px;
     color: #666;
     margin-left: 54px;
     margin-top: -2px;
+  }
+
+  .round-heavy .exercise-note {
+    color: rgba(230,57,70,0.7);
   }
 
   /* ── Footer ── */
@@ -203,7 +192,7 @@
 
   .notes {
     font-size: 18px;
-    color: #666;
+    color: #555;
     font-weight: 400;
     line-height: 1.4;
   }
@@ -227,27 +216,29 @@
     <div class="workout-subtitle">{{.Subtitle}}</div>
   </div>
 
-  <div class="meta-row">
-    {{if .Warmup}}
-    <div class="warmup-box">
-      <div class="section-label">Warmup</div>
-      {{range .Warmup}}
-      <div class="warmup-item">{{.}}</div>
-      {{end}}
+  {{if .Warmup}}
+  <div class="warmup-strip">
+    <div class="warmup-label">Warmup</div>
+    <div class="warmup-items">
+      {{range .Warmup}}<div class="warmup-item">{{.}}</div>{{end}}
     </div>
-    {{end}}
-
-    {{if .Heavy}}
-    <div class="heavy-box">
-      <div class="section-label">Strength</div>
-      <div class="heavy-movement">{{.Heavy.Movement}}</div>
-      <div class="heavy-scheme">{{.Heavy.Sets}} sets &times; {{.Heavy.Reps}} reps</div>
-      {{if .Heavy.Note}}<div class="heavy-note">{{.Heavy.Note}}</div>{{end}}
-    </div>
-    {{end}}
   </div>
+  {{end}}
 
   <div class="rounds-grid">
+
+    {{if .Heavy}}
+    <div class="round-heavy">
+      <div class="round-label">Strength · Min 1</div>
+      <div class="round-number">1</div>
+      <div class="exercise">
+        <div class="exercise-reps">{{.Heavy.Sets}}×{{.Heavy.Reps}}</div>
+        <div class="exercise-name">{{.Heavy.Movement}}</div>
+      </div>
+      {{if .Heavy.Note}}<div class="exercise-note">{{.Heavy.Note}}</div>{{end}}
+    </div>
+    {{end}}
+
     {{range .Rounds}}
     <div class="round">
       <div class="round-label">Minute</div>
@@ -261,6 +252,7 @@
       {{end}}
     </div>
     {{end}}
+
   </div>
 
   <div class="footer">

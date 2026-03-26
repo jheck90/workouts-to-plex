@@ -139,7 +139,11 @@ func (g *Generator) Generate(s Settings, w Workout) (string, error) {
 		return pngPath, nil
 	}
 
-	cols := columns(len(w.Rounds))
+	roundCount := len(w.Rounds)
+	if w.Heavy != nil {
+		roundCount++ // heavy occupies Minute 1
+	}
+	cols := columns(roundCount)
 
 	data := templateData{
 		Name:     w.Name,
@@ -201,14 +205,16 @@ func slugify(s string) string {
 }
 
 func columns(rounds int) int {
-	if rounds <= 2 {
+	switch {
+	case rounds <= 2:
 		return rounds
-	}
-	if rounds <= 4 {
+	case rounds <= 4:
 		return 2
-	}
-	if rounds <= 6 {
+	case rounds <= 5:
+		return 5
+	case rounds <= 6:
 		return 3
+	default:
+		return 4
 	}
-	return 4
 }
