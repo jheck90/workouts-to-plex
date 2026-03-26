@@ -11,9 +11,6 @@
     background: #0f0f0f;
     font-family: 'Arial Black', 'Helvetica Neue', sans-serif;
     color: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     overflow: hidden;
   }
 
@@ -22,129 +19,202 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 60px 80px;
+    padding: 52px 72px 40px;
     background: linear-gradient(145deg, #141414 0%, #1a1a2e 100%);
-    border: 1px solid #2a2a2a;
     position: relative;
+    gap: 24px;
   }
 
   .accent-bar {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 8px;
+    top: 0; left: 0; right: 0;
+    height: 7px;
     background: linear-gradient(90deg, #e63946, #f4a261, #2a9d8f);
   }
 
+  /* ── Header ── */
   .header {
-    margin-bottom: 40px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
     border-bottom: 1px solid #2a2a2a;
-    padding-bottom: 30px;
-  }
-
-  .workout-type {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 6px;
-    text-transform: uppercase;
-    color: #e63946;
-    margin-bottom: 10px;
+    padding-bottom: 20px;
   }
 
   .workout-name {
-    font-size: 72px;
+    font-size: 80px;
     font-weight: 900;
     line-height: 1;
     letter-spacing: -2px;
-    color: #ffffff;
   }
 
+  .workout-subtitle {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: #e63946;
+    text-align: right;
+    padding-bottom: 6px;
+  }
+
+  /* ── Warmup + Heavy row ── */
+  .meta-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .warmup-box {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 18px 22px;
+  }
+
+  .warmup-box .section-label { color: #2a9d8f; }
+
+  .warmup-item {
+    font-size: 19px;
+    font-weight: 400;
+    color: #ccc;
+    line-height: 1.6;
+    padding-left: 14px;
+    position: relative;
+  }
+
+  .warmup-item::before {
+    content: '›';
+    position: absolute;
+    left: 0;
+    color: #2a9d8f;
+    font-weight: 900;
+  }
+
+  .heavy-box {
+    background: rgba(230,57,70,0.07);
+    border: 1px solid rgba(230,57,70,0.3);
+    border-radius: 10px;
+    padding: 18px 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .heavy-box .section-label { color: #e63946; }
+
+  .heavy-movement {
+    font-size: 36px;
+    font-weight: 900;
+    color: #ffffff;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .heavy-scheme {
+    font-size: 28px;
+    font-weight: 700;
+    color: #f4a261;
+    margin-bottom: 6px;
+  }
+
+  .heavy-note {
+    font-size: 17px;
+    font-weight: 400;
+    color: #888;
+  }
+
+  /* ── EMOM rounds ── */
   .rounds-grid {
     display: grid;
     grid-template-columns: repeat({{.Columns}}, 1fr);
-    gap: 24px;
+    gap: 16px;
     flex: 1;
-    align-content: start;
   }
 
   .round {
     background: rgba(255,255,255,0.04);
     border: 1px solid #2a2a2a;
-    border-radius: 12px;
-    padding: 24px 28px;
-    position: relative;
+    border-radius: 10px;
+    padding: 18px 22px;
   }
 
   .round-label {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 4px;
     text-transform: uppercase;
-    color: #555;
-    margin-bottom: 6px;
+    color: #444;
+    margin-bottom: 4px;
   }
 
   .round-number {
-    font-size: 48px;
+    font-size: 44px;
     font-weight: 900;
     color: #e63946;
     line-height: 1;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
   }
 
   .exercise {
     display: flex;
     align-items: baseline;
     gap: 10px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
   .exercise-reps {
-    font-size: 32px;
+    font-size: 28px;
     font-weight: 900;
     color: #f4a261;
-    min-width: 48px;
+    min-width: 44px;
     text-align: right;
   }
 
   .exercise-name {
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 700;
     color: #ffffff;
   }
 
   .exercise-note {
-    font-size: 16px;
-    font-weight: 400;
-    color: #888;
-    margin-left: 58px;
+    font-size: 14px;
+    color: #666;
+    margin-left: 54px;
     margin-top: -2px;
   }
 
+  /* ── Footer ── */
   .footer {
-    margin-top: 30px;
-    padding-top: 24px;
-    border-top: 1px solid #2a2a2a;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-top: 1px solid #2a2a2a;
+    padding-top: 16px;
   }
 
   .notes {
-    font-size: 20px;
-    color: #888;
+    font-size: 18px;
+    color: #666;
     font-weight: 400;
-    max-width: 80%;
-    line-height: 1.5;
+    line-height: 1.4;
   }
 
   .timer-hint {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     letter-spacing: 3px;
     text-transform: uppercase;
     color: #2a9d8f;
+    white-space: nowrap;
   }
 </style>
 </head>
@@ -153,8 +223,28 @@
   <div class="accent-bar"></div>
 
   <div class="header">
-    <div class="workout-type">{{.Subtitle}}</div>
     <div class="workout-name">{{.Name}}</div>
+    <div class="workout-subtitle">{{.Subtitle}}</div>
+  </div>
+
+  <div class="meta-row">
+    {{if .Warmup}}
+    <div class="warmup-box">
+      <div class="section-label">Warmup</div>
+      {{range .Warmup}}
+      <div class="warmup-item">{{.}}</div>
+      {{end}}
+    </div>
+    {{end}}
+
+    {{if .Heavy}}
+    <div class="heavy-box">
+      <div class="section-label">Strength</div>
+      <div class="heavy-movement">{{.Heavy.Movement}}</div>
+      <div class="heavy-scheme">{{.Heavy.Sets}} sets &times; {{.Heavy.Reps}} reps</div>
+      {{if .Heavy.Note}}<div class="heavy-note">{{.Heavy.Note}}</div>{{end}}
+    </div>
+    {{end}}
   </div>
 
   <div class="rounds-grid">

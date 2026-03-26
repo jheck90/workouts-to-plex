@@ -25,15 +25,24 @@ type Settings struct {
 }
 
 type Workout struct {
-	Name         string  `yaml:"name"`
-	Subtitle     string  `yaml:"subtitle"`
-	Category     string  `yaml:"category"`
-	Episode      int     `yaml:"episode"`
-	TimerSeconds int     `yaml:"timer_seconds"`
-	TotalMinutes int     `yaml:"total_minutes"`
-	Theme        string  `yaml:"theme"`
-	Rounds       []Round `yaml:"rounds"`
-	Notes        string  `yaml:"notes"`
+	Name         string   `yaml:"name"`
+	Subtitle     string   `yaml:"subtitle"`
+	Category     string   `yaml:"category"`
+	Episode      int      `yaml:"episode"`
+	TimerSeconds int      `yaml:"timer_seconds"`
+	TotalMinutes int      `yaml:"total_minutes"`
+	Theme        string   `yaml:"theme"`
+	Warmup       []string `yaml:"warmup"`
+	Heavy        *Heavy   `yaml:"heavy"`
+	Rounds       []Round  `yaml:"rounds"`
+	Notes        string   `yaml:"notes"`
+}
+
+type Heavy struct {
+	Movement string `yaml:"movement"`
+	Sets     int    `yaml:"sets"`
+	Reps     string `yaml:"reps"`
+	Note     string `yaml:"note"`
 }
 
 type Round struct {
@@ -56,6 +65,8 @@ type templateData struct {
 	Width    int
 	Height   int
 	Columns  int
+	Warmup   []string
+	Heavy    *Heavy
 	Rounds   []Round
 }
 
@@ -137,6 +148,8 @@ func (g *Generator) Generate(s Settings, w Workout) (string, error) {
 		Width:    s.Width,
 		Height:   s.Height,
 		Columns:  cols,
+		Warmup:   w.Warmup,
+		Heavy:    w.Heavy,
 		Rounds:   w.Rounds,
 	}
 
