@@ -16,7 +16,7 @@ job "workouts-to-plex" {
       driver = "docker"
 
       config {
-        image = "ghcr.io/jheck90/workouts-to-plex:latest"
+        image = "jheck90/workouts-to-plex:latest"
 
         volumes = [
           "/mnt/nfs-share/nomad/workouts-to-plex/workouts.yaml:/workouts.yaml",

@@ -80,34 +80,28 @@ A Nomad job spec is included at `workouts-to-plex.nomad.hcl`. Update the volume 
 nomad job run workouts-to-plex.nomad.hcl
 ```
 
-The job expects the Docker image to be published to `ghcr.io/jheck90/workouts-to-plex:latest`. See the [GitHub Actions](#cicd) section below for publishing.
+The job expects the Docker image to be published to `jheck90/workouts-to-plex` on Docker Hub. Pin to a specific semver tag in production (e.g. `jheck90/workouts-to-plex:1.0.0`).
 
 ## CI/CD
 
-To publish the image to GHCR automatically on push, add a `.github/workflows/docker.yml`:
+Images are published to [Docker Hub](https://hub.docker.com/r/jheck90/workouts-to-plex) automatically when a semver tag is pushed:
 
-```yaml
-name: Build and push Docker image
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v5
-        with:
-          push: true
-          tags: ghcr.io/jheck90/workouts-to-plex:latest
+```bash
+git tag v1.0.0
+git push origin v1.0.0
 ```
+
+This produces the following tags on Docker Hub:
+- `jheck90/workouts-to-plex:1.0.0`
+- `jheck90/workouts-to-plex:1.0`
+- `jheck90/workouts-to-plex:1`
+- `jheck90/workouts-to-plex:latest`
+
+### Required secrets
+
+Add these to your GitHub repository secrets (`Settings → Secrets → Actions`):
+
+| Secret | Value |
+|--------|-------|
+| `DOCKERHUB_USERNAME` | `jheck90` |
+| `DOCKERHUB_TOKEN` | Docker Hub access token (not your password) |
