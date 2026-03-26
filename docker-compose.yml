@@ -1,0 +1,9 @@
+services:
+  workouts-to-plex:
+    build: .
+    restart: unless-stopped
+    environment:
+      - TIMER_SECONDS=60   # countdown duration in seconds
+    volumes:
+      - ./images:/input    # drop workout images here
+      - ./plex:/output     # point Plex library at this directory
