@@ -1,6 +1,8 @@
 package generator
 
 import (
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -79,8 +81,6 @@ type Generator struct {
 
 func New(outputDir string) (*Generator, error) {
 	tmplPath := filepath.Join(filepath.Dir(os.Args[0]), "template.html")
-
-	// Fallback: look relative to binary location or embedded path
 	if _, err := os.Stat(tmplPath); err != nil {
 		tmplPath = "/app/template.html"
 	}
@@ -109,41 +109,51 @@ func LoadConfig(path string) (*Config, error) {
 }
 
 // GenerateResult pairs a generated PNG path with its source Workout.
+// Regenerated is true when the config changed and outputs were rebuilt.
 type GenerateResult struct {
-	PNGPath string
-	Workout Workout
+	PNGPath     string
+	Workout     Workout
+	Regenerated bool
 }
 
 // GenerateAll renders every workout in the config to a PNG in outputDir.
 func (g *Generator) GenerateAll(cfg *Config) ([]GenerateResult, error) {
 	var results []GenerateResult
 	for _, w := range cfg.Workouts {
-		path, err := g.Generate(cfg.Settings, w)
+		path, regen, err := g.Generate(cfg.Settings, w)
 		if err != nil {
 			log.Printf("failed to generate %q: %v", w.Name, err)
 			continue
 		}
-		results = append(results, GenerateResult{PNGPath: path, Workout: w})
+		results = append(results, GenerateResult{PNGPath: path, Workout: w, Regenerated: regen})
 	}
 	return results, nil
 }
 
-// Generate renders one workout card to a PNG and returns its path.
-func (g *Generator) Generate(s Settings, w Workout) (string, error) {
+// Generate renders one workout card to a PNG.
+// Returns the PNG path, whether it was regenerated, and any error.
+func (g *Generator) Generate(s Settings, w Workout) (string, bool, error) {
 	slug := slugify(w.Name)
 	htmlPath := filepath.Join(os.TempDir(), slug+".html")
 	pngPath := filepath.Join(g.outputDir, slug+".png")
+	hashPath := filepath.Join(g.outputDir, slug+".sha256")
 
-	if _, err := os.Stat(pngPath); err == nil {
-		log.Printf("skipping %q — PNG already exists", w.Name)
-		return pngPath, nil
+	hash := workoutHash(s, w)
+
+	// Check if existing PNG matches the current config hash
+	if storedHash, err := os.ReadFile(hashPath); err == nil {
+		if strings.TrimSpace(string(storedHash)) == hash {
+			log.Printf("skipping %q — config unchanged", w.Name)
+			return pngPath, false, nil
+		}
+		log.Printf("config changed for %q — regenerating", w.Name)
+		os.Remove(pngPath)
 	}
 
 	roundCount := len(w.Rounds)
 	if w.Heavy != nil {
-		roundCount++ // heavy occupies Minute 1
+		roundCount++
 	}
-	cols := columns(roundCount)
 
 	data := templateData{
 		Name:     w.Name,
@@ -151,7 +161,7 @@ func (g *Generator) Generate(s Settings, w Workout) (string, error) {
 		Notes:    w.Notes,
 		Width:    s.Width,
 		Height:   s.Height,
-		Columns:  cols,
+		Columns:  columns(roundCount),
 		Warmup:   w.Warmup,
 		Heavy:    w.Heavy,
 		Rounds:   w.Rounds,
@@ -159,12 +169,11 @@ func (g *Generator) Generate(s Settings, w Workout) (string, error) {
 
 	f, err := os.Create(htmlPath)
 	if err != nil {
-		return "", fmt.Errorf("could not create html file: %w", err)
+		return "", false, fmt.Errorf("could not create html file: %w", err)
 	}
-	defer f.Close()
-
 	if err := g.tmpl.Execute(f, data); err != nil {
-		return "", fmt.Errorf("template render failed: %w", err)
+		f.Close()
+		return "", false, fmt.Errorf("template render failed: %w", err)
 	}
 	f.Close()
 
@@ -183,11 +192,26 @@ func (g *Generator) Generate(s Settings, w Workout) (string, error) {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("chromium screenshot failed: %w", err)
+		return "", false, fmt.Errorf("chromium screenshot failed: %w", err)
+	}
+
+	// Save hash so next run can detect changes
+	if err := os.WriteFile(hashPath, []byte(hash), 0644); err != nil {
+		log.Printf("warning: could not save hash for %q: %v", w.Name, err)
 	}
 
 	log.Printf("generated: %s", pngPath)
-	return pngPath, nil
+	return pngPath, true, nil
+}
+
+// workoutHash returns a stable SHA256 of the workout config + settings.
+func workoutHash(s Settings, w Workout) string {
+	payload := struct {
+		Settings Settings
+		Workout  Workout
+	}{s, w}
+	b, _ := json.Marshal(payload)
+	return fmt.Sprintf("%x", sha256.Sum256(b))
 }
 
 func Slugify(s string) string { return slugify(s) }

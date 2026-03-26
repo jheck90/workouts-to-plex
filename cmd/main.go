@@ -91,6 +91,11 @@ func runGenerator(configPath, inputDir, outputDir string) error {
 	year := time.Now().Year()
 	for _, r := range pngs {
 		outPath := plexOutputPath(outputDir, r.Workout, year)
+		if r.Regenerated {
+			if err := os.Remove(outPath); err == nil {
+				log.Printf("removed stale MP4: %s", filepath.Base(outPath))
+			}
+		}
 		timer := r.Workout.TimerSeconds
 		if timer == 0 {
 			timer = 60
