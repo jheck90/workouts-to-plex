@@ -26,7 +26,7 @@ RUN mkdir -p /input /output
 
 ENV INPUT_DIR=/input
 ENV OUTPUT_DIR=/output
-ENV CONFIG_PATH=/workouts.yaml
+ENV CONFIG_PATH=/config/workouts.yaml
 
 VOLUME ["/input", "/output"]
 

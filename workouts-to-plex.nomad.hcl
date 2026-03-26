@@ -14,7 +14,7 @@ job "workouts-to-plex" {
         image = "jheck90/workouts-to-plex:latest"
 
         volumes = [
-          "/mnt/nfs-share/nomad/workouts-to-plex/workouts.yaml:/workouts.yaml",
+          "/mnt/nfs-share/nomad/workouts-to-plex:/config",
           "/mnt/nfs-share/nomad/workouts-to-plex/images:/input",
           "/mnt/nfs-share/media/workouts:/output",
         ]
@@ -22,7 +22,7 @@ job "workouts-to-plex" {
 
       env {
         TZ            = "America/Denver"
-        CONFIG_PATH   = "/workouts.yaml"
+        CONFIG_PATH   = "/config/workouts.yaml"
         INPUT_DIR     = "/input"
         OUTPUT_DIR    = "/output"
         TIMER_SECONDS = "60"

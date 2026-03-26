@@ -3,6 +3,6 @@ services:
     build: .
     restart: unless-stopped
     volumes:
-      - ./workouts.yaml:/workouts.yaml            # workout definitions
-      - ./images:/input                         # generated PNGs land here (intermediate)
-      - ./plex:/output                          # point Plex library at this directory
+      - .:/config                                 # workout definitions (reads /config/workouts.yaml)
+      - ./images:/input                          # generated PNGs land here (intermediate)
+      - ./plex:/output                           # point Plex library at this directory
