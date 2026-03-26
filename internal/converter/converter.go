@@ -65,6 +65,7 @@ func (c *Converter) ConvertWithTimer(inputPath string, timerSeconds int) error {
 		"-c:v", "libx264",
 		"-pix_fmt", "yuv420p",
 		"-r", "1", // 1 fps — static image, saves space
+		"-movflags", "+faststart", // move moov atom to front for streaming
 		outputPath,
 	}
 
