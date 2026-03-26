@@ -71,37 +71,3 @@ Re-run the container after editing `workouts.yaml` to regenerate the videos. Exi
 | `INPUT_DIR` | `/input` | Directory to watch for new images |
 | `OUTPUT_DIR` | `/output` | Directory to write MP4s into |
 | `TIMER_SECONDS` | `60` | Default countdown duration (overridden per-workout in yaml) |
-
-## Nomad
-
-A Nomad job spec is included at `workouts-to-plex.nomad.hcl`. Update the volume paths to match your NFS mount layout, then:
-
-```bash
-nomad job run workouts-to-plex.nomad.hcl
-```
-
-The job expects the Docker image to be published to `jheck90/workouts-to-plex` on Docker Hub. Pin to a specific semver tag in production (e.g. `jheck90/workouts-to-plex:1.0.0`).
-
-## CI/CD
-
-Images are published to [Docker Hub](https://hub.docker.com/r/jheck90/workouts-to-plex) automatically when a semver tag is pushed:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-This produces the following tags on Docker Hub:
-- `jheck90/workouts-to-plex:1.0.0`
-- `jheck90/workouts-to-plex:1.0`
-- `jheck90/workouts-to-plex:1`
-- `jheck90/workouts-to-plex:latest`
-
-### Required secrets
-
-Add these to your GitHub repository secrets (`Settings → Secrets → Actions`):
-
-| Secret | Value |
-|--------|-------|
-| `DOCKERHUB_USERNAME` | `jheck90` |
-| `DOCKERHUB_TOKEN` | Docker Hub access token (not your password) |

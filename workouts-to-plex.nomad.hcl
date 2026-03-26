@@ -4,11 +4,6 @@ job "workouts-to-plex" {
   namespace   = "plex"
   priority    = 50
 
-  constraint {
-    attribute = node.unique.name
-    value     = "beef-server"
-  }
-
   group "workouts-to-plex" {
     count = 1
 
