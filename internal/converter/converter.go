@@ -30,15 +30,23 @@ func (c *Converter) IsSupported(path string) bool {
 	return supportedExtensions[ext]
 }
 
-// Convert uses the default 60s timer.
+// Convert uses the default 60s timer, outputting into the configured output dir.
 func (c *Converter) Convert(inputPath string) error {
 	return c.ConvertWithTimer(inputPath, defaultTimer)
 }
 
-// ConvertWithTimer uses a caller-supplied timer duration.
+// ConvertWithTimer uses a caller-supplied timer, outputting into the configured output dir.
 func (c *Converter) ConvertWithTimer(inputPath string, timerSeconds int) error {
 	base := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
 	outputPath := filepath.Join(c.outputDir, base+".mp4")
+	return c.ConvertTo(inputPath, outputPath, timerSeconds)
+}
+
+// ConvertTo converts to an explicit output path, creating parent directories as needed.
+func (c *Converter) ConvertTo(inputPath, outputPath string, timerSeconds int) error {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+		return fmt.Errorf("failed to create output dir: %w", err)
+	}
 
 	if _, err := os.Stat(outputPath); err == nil {
 		log.Printf("skipping %s — output already exists", filepath.Base(inputPath))

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/jheck90/workouts-to-plex/internal/converter"
@@ -86,21 +88,29 @@ func runGenerator(configPath, inputDir, outputDir string) error {
 		return err
 	}
 
-	for _, png := range pngs {
-		// Find the timer for this workout
-		timerSeconds := 60
-		slug := slugFromPath(png)
-		for _, w := range cfg.Workouts {
-			if generator.Slugify(w.Name) == slug {
-				timerSeconds = w.TimerSeconds
-				break
-			}
+	year := time.Now().Year()
+	for _, r := range pngs {
+		outPath := plexOutputPath(outputDir, r.Workout, year)
+		timer := r.Workout.TimerSeconds
+		if timer == 0 {
+			timer = 60
 		}
-		if err := conv.ConvertWithTimer(png, timerSeconds); err != nil {
-			log.Printf("convert error for %s: %v", png, err)
+		if err := conv.ConvertTo(r.PNGPath, outPath, timer); err != nil {
+			log.Printf("convert error for %s: %v", r.PNGPath, err)
 		}
 	}
 	return nil
+}
+
+// plexOutputPath builds a Plex-friendly path:
+// <outputDir>/<Category>/s<year>e<episode> - <Name>.mp4
+func plexOutputPath(outputDir string, w generator.Workout, year int) string {
+	category := w.Category
+	if category == "" {
+		category = "Workouts"
+	}
+	filename := fmt.Sprintf("s%de%02d - %s.mp4", year, w.Episode, w.Name)
+	return filepath.Join(outputDir, category, filename)
 }
 
 func processExisting(dir string, conv *converter.Converter) {
@@ -122,11 +132,6 @@ func processExisting(dir string, conv *converter.Converter) {
 	}
 }
 
-func slugFromPath(p string) string {
-	base := filepath.Base(p)
-	ext := filepath.Ext(base)
-	return base[:len(base)-len(ext)]
-}
 
 func getEnv(key, fallback string) string {
 	if val := os.Getenv(key); val != "" {

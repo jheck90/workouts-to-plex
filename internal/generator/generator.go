@@ -27,6 +27,8 @@ type Settings struct {
 type Workout struct {
 	Name         string  `yaml:"name"`
 	Subtitle     string  `yaml:"subtitle"`
+	Category     string  `yaml:"category"`
+	Episode      int     `yaml:"episode"`
 	TimerSeconds int     `yaml:"timer_seconds"`
 	Theme        string  `yaml:"theme"`
 	Rounds       []Round `yaml:"rounds"`
@@ -94,18 +96,24 @@ func LoadConfig(path string) (*Config, error) {
 	return &cfg, nil
 }
 
+// GenerateResult pairs a generated PNG path with its source Workout.
+type GenerateResult struct {
+	PNGPath string
+	Workout Workout
+}
+
 // GenerateAll renders every workout in the config to a PNG in outputDir.
-func (g *Generator) GenerateAll(cfg *Config) ([]string, error) {
-	var outputs []string
+func (g *Generator) GenerateAll(cfg *Config) ([]GenerateResult, error) {
+	var results []GenerateResult
 	for _, w := range cfg.Workouts {
 		path, err := g.Generate(cfg.Settings, w)
 		if err != nil {
 			log.Printf("failed to generate %q: %v", w.Name, err)
 			continue
 		}
-		outputs = append(outputs, path)
+		results = append(results, GenerateResult{PNGPath: path, Workout: w})
 	}
-	return outputs, nil
+	return results, nil
 }
 
 // Generate renders one workout card to a PNG and returns its path.
