@@ -74,4 +74,17 @@ Re-run the container after editing `workouts.yaml` to regenerate the videos. Exi
 | `CONFIG_PATH` | `/workouts.yaml` | Path to workout definitions file |
 | `INPUT_DIR` | `/input` | Directory to watch for new images |
 | `OUTPUT_DIR` | `/output` | Directory to write MP4s into |
-| `TIMER_SECONDS` | `60` | Default countdown duration (overridden per-workout in yaml) |
+
+## Roadmap / TODO
+
+- **Cleanup intermediate files** — temp `.mp4` cycle files and intermediate frame PNGs are left on disk after conversion. Add a cleanup pass to remove them once the final output MP4 is written.
+
+- **Batch job mode** — the app currently runs as a long-lived service (watching `/input` for new files) even though the actual work is a one-shot generation step. Convert to a batch/run-once mode so it exits cleanly after processing and doesn't hold resources. A sidecar watcher or a simple cron trigger could handle the "new file" case separately.
+
+- **AI workout generation via remote trigger** — add a Claude-backed prompt wrapper so users can describe a workout in plain English (e.g. "give me a 5-min upper body EMOM") and have it generate the `workouts.yaml` entry, trigger the job, and produce the video. Could be exposed as a Claude remote trigger endpoint, a small HTTP API, or a CLI flag.
+
+- **Discord integration** — notify a Discord channel when new media is ready in Plex, and/or accept slash commands from Discord to trigger workout generation (feeding into the AI wrapper above). Closes the loop: ask for a workout in Discord → Claude generates it → job runs → Discord confirms it's in Plex.
+
+- **Configurable Plex naming convention** — the output filename format (`s<year>e<episode> - <Name>.mp4`) and category subdirectory are hardcoded. Expose these as env vars so users can match whatever naming scheme their Plex library expects without rebuilding the container.
+
+- **Per-workout timer duration on the video** — the countdown timer is currently hardcoded to 60 seconds in the FFmpeg filter regardless of the workout's `timer_seconds` value. The overlay should read from the per-workout YAML field so non-60s workouts (e.g. 30s AMRAP, 90s strength intervals) display the correct countdown.
