@@ -22,19 +22,27 @@ func main() {
 	log.Printf("  input:  %s", inputDir)
 	log.Printf("  output: %s", outputDir)
 
+	// generatedFrames tracks PNGs written by the generator so the watcher and
+	// processExisting don't re-convert them as standalone videos.
+	generatedFrames := map[string]bool{}
+
 	// --- Generate images from workouts.yaml ---
 	if _, err := os.Stat(configPath); err == nil {
-		if err := runGenerator(configPath, inputDir, outputDir); err != nil {
+		frames, err := runGenerator(configPath, inputDir, outputDir)
+		if err != nil {
 			log.Printf("generator error: %v", err)
+		}
+		for _, p := range frames {
+			generatedFrames[filepath.Clean(p)] = true
 		}
 	} else {
 		log.Printf("no config found at %s, skipping generation step", configPath)
 	}
 
-	// --- Convert any images (pre-existing + newly dropped) to video ---
+	// --- Convert any manually dropped images to video ---
 	conv := converter.New(outputDir)
 
-	processExisting(inputDir, conv)
+	processExisting(inputDir, conv, generatedFrames)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -55,7 +63,8 @@ func main() {
 				return
 			}
 			if event.Has(fsnotify.Create) || event.Has(fsnotify.Write) {
-				if conv.IsSupported(event.Name) {
+				clean := filepath.Clean(event.Name)
+				if !generatedFrames[clean] && conv.IsSupported(event.Name) {
 					if err := conv.Convert(event.Name); err != nil {
 						log.Printf("convert error: %v", err)
 					}
@@ -70,26 +79,30 @@ func main() {
 	}
 }
 
-func runGenerator(configPath, inputDir, outputDir string) error {
+// runGenerator generates frame PNGs and converts them to Plex MP4s.
+// Returns the paths of all frame PNGs that were written to inputDir.
+func runGenerator(configPath, inputDir, outputDir string) ([]string, error) {
 	cfg, err := generator.LoadConfig(configPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	gen, err := generator.New(inputDir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	conv := converter.New(outputDir)
 
-	pngs, err := gen.GenerateAll(cfg)
+	results, err := gen.GenerateAll(cfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	var allFrames []string
 	year := time.Now().Year()
-	for _, r := range pngs {
+	for _, r := range results {
+		allFrames = append(allFrames, r.PNGPaths...)
 		outPath := plexOutputPath(outputDir, r.Workout, year)
 		if r.Regenerated {
 			if err := os.Remove(outPath); err == nil {
@@ -112,7 +125,7 @@ func runGenerator(configPath, inputDir, outputDir string) error {
 			log.Printf("convert error for %s: %v", r.Workout.Name, err)
 		}
 	}
-	return nil
+	return allFrames, nil
 }
 
 // plexOutputPath builds a Plex-friendly path:
@@ -126,7 +139,7 @@ func plexOutputPath(outputDir string, w generator.Workout, year int) string {
 	return filepath.Join(outputDir, category, filename)
 }
 
-func processExisting(dir string, conv *converter.Converter) {
+func processExisting(dir string, conv *converter.Converter, skip map[string]bool) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		log.Printf("could not read input dir: %v", err)
@@ -137,6 +150,9 @@ func processExisting(dir string, conv *converter.Converter) {
 			continue
 		}
 		path := filepath.Join(dir, entry.Name())
+		if skip[filepath.Clean(path)] {
+			continue
+		}
 		if conv.IsSupported(path) {
 			if err := conv.Convert(path); err != nil {
 				log.Printf("error processing %s: %v", entry.Name(), err)
@@ -144,7 +160,6 @@ func processExisting(dir string, conv *converter.Converter) {
 		}
 	}
 }
-
 
 func getEnv(key, fallback string) string {
 	if val := os.Getenv(key); val != "" {

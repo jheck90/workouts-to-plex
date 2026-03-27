@@ -1,38 +1,121 @@
-# workouts-to-plex prompt file
-# Each entry generates one HTML card → PNG → MP4 in your Plex library.
+# workouts-to-plex config
+# Each entry generates one workout card → PNG → 60-min looping MP4 in Plex.
 #
-# width/height: output image resolution (1920x1080 = 1080p, 3840x2160 = 4K)
-# timer_seconds: countdown duration; for EMOM this should always be 60
-# loop: if true, the video will loop continuously in Plex (set timer_seconds to 60 for EMOM)
+# category:      becomes the Plex "show" subdirectory
+# episode:       Plex episode number (increment when adding new workouts)
+# timer_seconds: length of each EMOM cycle (60 for standard EMOM)
+# total_minutes: total video length (default 60)
+# heavy:         Minute 1 of the cycle — rendered with strength styling
 
 settings:
   width: 1920
   height: 1080
 
 workouts:
-  - name: "20 Min EMOM"
-    subtitle: "Every Minute On the Minute"
+
+  - name: "Push Day"
+    subtitle: "5-Min EMOM × 4 Rounds"
     category: "EMOM"
     episode: 1
     timer_seconds: 60
     total_minutes: 60
-    theme: dark
+    warmup:
+      - "10x Arm circles (each direction)"
+      - "10x Band pull-aparts"
+      - "10x Wall slides"
+      - "10x Light push-ups"
+    heavy:
+      movement: "Bench Press"
+      sets: 1
+      reps: "3"
+      note: "@ 80–85% 1RM"
     rounds:
-      - minute: 1
-        exercises:
-          - movement: "Burpees"
-            reps: 10
       - minute: 2
         exercises:
-          - movement: "Air Squats"
-            reps: 15
+          - movement: "Push-Ups"
+            reps: 12
       - minute: 3
         exercises:
-          - movement: "Push Ups"
-            reps: 12
+          - movement: "DB Shoulder Press"
+            reps: 10
       - minute: 4
         exercises:
-          - movement: "Mountain Climbers"
-            reps: 20
+          - movement: "Tricep Dips"
+            reps: 12
+      - minute: 5
+        exercises:
+          - movement: "Lateral Raises"
+            reps: 10
+    notes: "Rest for remaining time each minute. Repeat 5-min cycle × 4 = 20 minutes."
+
+  - name: "Pull Day"
+    subtitle: "5-Min EMOM × 4 Rounds"
+    category: "EMOM"
+    episode: 2
+    timer_seconds: 60
+    total_minutes: 60
+    warmup:
+      - "10x Band pull-aparts"
+      - "10x Face pulls (light)"
+      - "30s Dead hang"
+      - "5x Scapular pull-ups"
+    heavy:
+      movement: "Barbell Row"
+      sets: 1
+      reps: "5"
+      note: "@ 80–85% 1RM"
+    rounds:
+      - minute: 2
+        exercises:
+          - movement: "Pull-Ups"
+            reps: 8
+      - minute: 3
+        exercises:
+          - movement: "DB Rows"
+            reps: 12
+            note: "each arm"
+      - minute: 4
+        exercises:
+          - movement: "Face Pulls"
+            reps: 15
+      - minute: 5
+        exercises:
+          - movement: "Hammer Curls"
+            reps: 10
+    notes: "Rest for remaining time each minute. Repeat 5-min cycle × 4 = 20 minutes."
+
+  - name: "Leg Day"
+    subtitle: "5-Min EMOM × 4 Rounds"
+    category: "EMOM"
+    episode: 3
+    timer_seconds: 60
+    total_minutes: 60
+    warmup:
+      - "10x Hip circles (each direction)"
+      - "10x Leg swings (each leg)"
+      - "10x Bodyweight squats"
+      - "10x Walking lunges"
+    heavy:
+      movement: "Back Squat"
+      sets: 1
+      reps: "3"
+      note: "@ 80–85% 1RM"
+    rounds:
+      - minute: 2
+        exercises:
+          - movement: "Goblet Squats"
+            reps: 10
+      - minute: 3
+        exercises:
+          - movement: "Reverse Lunges"
+            reps: 12
             note: "each leg"
-    notes: "Rest for remaining time each minute. Repeat rounds 1–4 for 20 minutes."
+      - minute: 4
+        exercises:
+          - movement: "Glute Bridges"
+            reps: 15
+      - minute: 5
+        exercises:
+          - movement: "Box Jumps"
+            reps: 10
+    notes: "Rest for remaining time each minute. Repeat 5-min cycle × 4 = 20 minutes."

@@ -61,16 +61,17 @@ type Exercise struct {
 // --- Template data ---
 
 type templateData struct {
-	Name      string
-	Subtitle  string
-	Notes     string
-	Width     int
-	Height    int
-	Columns   int
-	Warmup    []string
-	Heavy     *Heavy
-	Rounds    []Round
-	Highlight string // "warmup", "1", "2", "3", ... — active slide
+	Name         string
+	Subtitle     string
+	Notes        string
+	Width        int
+	Height       int
+	Columns      int
+	TimerSeconds int
+	Warmup       []string
+	Heavy        *Heavy
+	Rounds       []Round
+	Highlight    string // "warmup", "1", "2", "3", ... — active slide
 }
 
 // --- Generator ---
@@ -192,17 +193,22 @@ func (g *Generator) renderFrame(s Settings, w Workout, slug, highlight string, r
 	pngPath := filepath.Join(g.outputDir, slug+"_"+highlight+".png")
 	htmlPath := filepath.Join(os.TempDir(), slug+"_"+highlight+".html")
 
+	timer := w.TimerSeconds
+	if timer == 0 {
+		timer = 60
+	}
 	data := templateData{
-		Name:      w.Name,
-		Subtitle:  w.Subtitle,
-		Notes:     w.Notes,
-		Width:     s.Width,
-		Height:    s.Height,
-		Columns:   columns(roundCount),
-		Warmup:    w.Warmup,
-		Heavy:     w.Heavy,
-		Rounds:    w.Rounds,
-		Highlight: highlight,
+		Name:         w.Name,
+		Subtitle:     w.Subtitle,
+		Notes:        w.Notes,
+		Width:        s.Width,
+		Height:       s.Height,
+		Columns:      columns(roundCount),
+		TimerSeconds: timer,
+		Warmup:       w.Warmup,
+		Heavy:        w.Heavy,
+		Rounds:       w.Rounds,
+		Highlight:    highlight,
 	}
 
 	f, err := os.Create(htmlPath)
@@ -260,8 +266,6 @@ func workoutHash(s Settings, w Workout) string {
 	b, _ := json.Marshal(payload)
 	return fmt.Sprintf("%x", sha256.Sum256(b))
 }
-
-func Slugify(s string) string { return slugify(s) }
 
 func slugify(s string) string {
 	s = strings.ToLower(s)

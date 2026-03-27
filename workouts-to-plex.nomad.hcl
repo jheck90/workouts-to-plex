@@ -30,7 +30,6 @@ job "workouts-to-plex" {
         CONFIG_PATH   = "/config/workouts.yaml"
         INPUT_DIR     = "/input"
         OUTPUT_DIR    = "/output"
-        TIMER_SECONDS = "60"
       }
 
       resources {

@@ -4,7 +4,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build -o workouts-to-plex ./cmd/main.go
+RUN go build -o workouts-to-plex ./cmd/
 
 FROM alpine:3.19
 
