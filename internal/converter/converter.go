@@ -15,6 +15,11 @@ var supportedExtensions = map[string]bool{
 	".jpeg": true,
 }
 
+// Chapter represents a named chapter marker in the output video.
+type Chapter struct {
+	Title string
+}
+
 const defaultTimer        = 60
 const defaultTotalMinutes = 60
 
@@ -124,7 +129,9 @@ func (c *Converter) encodeCycle(inputPath, outputPath string, timerSeconds int) 
 // concatenates the frame sequence repeatedly to fill totalMinutes.
 // warmupCount is the number of leading frames that should only appear in the
 // first pass (e.g. 1 when the first frame is the warmup slide).
-func (c *Converter) ConvertFramesTo(inputPaths []string, outputPath string, timerSeconds, totalMinutes, warmupCount int) error {
+// warmupChapters and repeatingChapters name each frame for the Plex chapter scrubber;
+// pass nil to skip chapter embedding.
+func (c *Converter) ConvertFramesTo(inputPaths []string, outputPath string, timerSeconds, totalMinutes, warmupCount int, warmupChapters, repeatingChapters []Chapter) error {
 	if len(inputPaths) == 0 {
 		return fmt.Errorf("no input frames provided")
 	}
@@ -172,7 +179,7 @@ func (c *Converter) ConvertFramesTo(inputPaths []string, outputPath string, time
 		passes = 1
 	}
 
-	if err := c.loopFrames(warmupCycles, repeatingCycles, outputPath, passes); err != nil {
+	if err := c.loopFrames(warmupCycles, repeatingCycles, outputPath, timerSeconds, passes, warmupChapters, repeatingChapters); err != nil {
 		os.Remove(outputPath)
 		return err
 	}
@@ -182,15 +189,14 @@ func (c *Converter) ConvertFramesTo(inputPaths []string, outputPath string, time
 }
 
 // loopFrames stream-copies warmupFiles once (first pass only) followed by
-// repeatingFiles for `passes` passes.
-func (c *Converter) loopFrames(warmupFiles, repeatingFiles []string, outputPath string, passes int) error {
+// repeatingFiles for `passes` passes. Chapter metadata is embedded when chapters are provided.
+func (c *Converter) loopFrames(warmupFiles, repeatingFiles []string, outputPath string, timerSeconds, passes int, warmupChapters, repeatingChapters []Chapter) error {
 	log.Printf("concatenating warmup(%d) + %d frames × %d passes -> %s", len(warmupFiles), len(repeatingFiles), passes, filepath.Base(outputPath))
 
 	concatFile := outputPath + ".txt"
 	defer os.Remove(concatFile)
 
 	var sb strings.Builder
-	// Warmup frames appear only on the first pass.
 	for _, cf := range warmupFiles {
 		fmt.Fprintf(&sb, "file '%s'\n", cf)
 	}
@@ -203,15 +209,20 @@ func (c *Converter) loopFrames(warmupFiles, repeatingFiles []string, outputPath 
 		return fmt.Errorf("failed to write concat list: %w", err)
 	}
 
-	args := []string{
-		"-y",
-		"-f", "concat",
-		"-safe", "0",
-		"-i", concatFile,
-		"-c", "copy",
-		"-movflags", "+faststart",
-		outputPath,
+	args := []string{"-y", "-f", "concat", "-safe", "0", "-i", concatFile}
+
+	// Embed chapter markers when chapter titles are provided.
+	metaFile := outputPath + ".meta"
+	if len(warmupChapters)+len(repeatingChapters) > 0 {
+		if err := writeChapterMetadata(metaFile, len(warmupFiles), len(repeatingFiles), timerSeconds, passes, warmupChapters, repeatingChapters); err != nil {
+			log.Printf("warning: chapter metadata skipped: %v", err)
+		} else {
+			defer os.Remove(metaFile)
+			args = append(args, "-i", metaFile, "-map", "0", "-map_metadata", "1")
+		}
 	}
+
+	args = append(args, "-c", "copy", "-movflags", "+faststart", outputPath)
 
 	cmd := exec.Command("ffmpeg", args...)
 	cmd.Stdout = os.Stdout
@@ -220,6 +231,62 @@ func (c *Converter) loopFrames(warmupFiles, repeatingFiles []string, outputPath 
 		return fmt.Errorf("concat frames failed: %w", err)
 	}
 	return nil
+}
+
+// writeChapterMetadata writes an ffmetadata file with chapter timestamps.
+// The first pass through repeatingFiles gets named chapters; subsequent passes
+// get a single "Cycle N" chapter each.
+func writeChapterMetadata(path string, warmupCount, repeatingCount, timerSeconds, passes int, warmupChapters, repeatingChapters []Chapter) error {
+	var sb strings.Builder
+	sb.WriteString(";FFMETADATA1\n\n")
+
+	ms := 0 // current timestamp in milliseconds
+	step := timerSeconds * 1000
+
+	// Warmup — shown once.
+	for i := range warmupCount {
+		title := "Warmup"
+		if i < len(warmupChapters) {
+			title = warmupChapters[i].Title
+		}
+		fmt.Fprintf(&sb, "[CHAPTER]\nTIMEBASE=1/1000\nSTART=%d\nEND=%d\ntitle=%s\n\n",
+			ms, ms+step, escapeMetadata(title))
+		ms += step
+	}
+
+	// Repeating passes.
+	cycleDuration := repeatingCount * step
+	for pass := range passes {
+		if pass == 0 {
+			// First cycle: one named chapter per frame.
+			for i := range repeatingCount {
+				title := fmt.Sprintf("Cycle 1, Min %d", i+1)
+				if i < len(repeatingChapters) {
+					title = repeatingChapters[i].Title
+				}
+				fmt.Fprintf(&sb, "[CHAPTER]\nTIMEBASE=1/1000\nSTART=%d\nEND=%d\ntitle=%s\n\n",
+					ms, ms+step, escapeMetadata(title))
+				ms += step
+			}
+		} else {
+			// Subsequent cycles: one chapter for the whole cycle.
+			fmt.Fprintf(&sb, "[CHAPTER]\nTIMEBASE=1/1000\nSTART=%d\nEND=%d\ntitle=%s\n\n",
+				ms, ms+cycleDuration, escapeMetadata(fmt.Sprintf("Cycle %d", pass+1)))
+			ms += cycleDuration
+		}
+	}
+
+	return os.WriteFile(path, []byte(sb.String()), 0644)
+}
+
+// escapeMetadata escapes special characters for the ffmetadata format.
+func escapeMetadata(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "=", "\\=")
+	s = strings.ReplaceAll(s, ";", "\\;")
+	s = strings.ReplaceAll(s, "#", "\\#")
+	s = strings.ReplaceAll(s, "\n", "\\\n")
+	return s
 }
 
 // loopCycle stream-copies the cycle file N times into outputPath — no re-encode.

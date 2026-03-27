@@ -5,11 +5,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/jheck90/workouts-to-plex/internal/converter"
 	"github.com/jheck90/workouts-to-plex/internal/generator"
+	"github.com/jheck90/workouts-to-plex/internal/plex"
 )
 
 func main() {
@@ -121,11 +123,51 @@ func runGenerator(configPath, inputDir, outputDir string) ([]string, error) {
 		if len(r.Workout.Warmup) > 0 {
 			warmupCount = 1
 		}
-		if err := conv.ConvertFramesTo(r.PNGPaths, outPath, timer, totalMinutes, warmupCount); err != nil {
+
+		warmupChapters, repeatingChapters := buildChapters(r.Workout, warmupCount)
+
+		if err := conv.ConvertFramesTo(r.PNGPaths, outPath, timer, totalMinutes, warmupCount, warmupChapters, repeatingChapters); err != nil {
 			log.Printf("convert error for %s: %v", r.Workout.Name, err)
+			continue
+		}
+
+		// Plex metadata: NFO description + thumbnails.
+		if err := plex.WriteNFO(outPath, r.Workout, year); err != nil {
+			log.Printf("NFO error for %s: %v", r.Workout.Name, err)
+		}
+		if len(r.PNGPaths) > 0 {
+			if err := plex.WriteEpisodeThumb(outPath, r.PNGPaths[0]); err != nil {
+				log.Printf("thumb error for %s: %v", r.Workout.Name, err)
+			}
+			categoryDir := filepath.Dir(outPath)
+			if err := plex.WriteShowPoster(categoryDir, r.PNGPaths[0]); err != nil {
+				log.Printf("poster error for %s: %v", r.Workout.Name, err)
+			}
 		}
 	}
 	return allFrames, nil
+}
+
+// buildChapters constructs chapter title slices for the warmup and repeating frames.
+func buildChapters(w generator.Workout, warmupCount int) (warmup []converter.Chapter, repeating []converter.Chapter) {
+	if warmupCount > 0 {
+		warmup = []converter.Chapter{{Title: "Warmup"}}
+	}
+	if w.Heavy != nil {
+		repeating = append(repeating, converter.Chapter{
+			Title: fmt.Sprintf("Min 1: %s", w.Heavy.Movement),
+		})
+	}
+	for _, r := range w.Rounds {
+		names := make([]string, len(r.Exercises))
+		for i, ex := range r.Exercises {
+			names[i] = ex.Movement
+		}
+		repeating = append(repeating, converter.Chapter{
+			Title: fmt.Sprintf("Min %d: %s", r.Minute, strings.Join(names, " + ")),
+		})
+	}
+	return
 }
 
 // plexOutputPath builds a Plex-friendly path:
