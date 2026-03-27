@@ -140,15 +140,24 @@ func (g *Generator) GenerateFrames(s Settings, w Workout) ([]string, bool, error
 
 	highlights := frameHighlights(w)
 
-	// Check stored hash — if unchanged, return existing paths without regenerating
+	// Check stored hash — if unchanged and all frame files exist, skip regeneration
 	if storedHash, err := os.ReadFile(hashPath); err == nil {
 		if strings.TrimSpace(string(storedHash)) == hash {
-			log.Printf("skipping %q — config unchanged", w.Name)
 			paths := make([]string, len(highlights))
+			allExist := true
 			for i, h := range highlights {
-				paths[i] = filepath.Join(g.outputDir, slug+"_"+h+".png")
+				p := filepath.Join(g.outputDir, slug+"_"+h+".png")
+				paths[i] = p
+				if _, err := os.Stat(p); err != nil {
+					allExist = false
+					break
+				}
 			}
-			return paths, false, nil
+			if allExist {
+				log.Printf("skipping %q — config unchanged", w.Name)
+				return paths, false, nil
+			}
+			log.Printf("regenerating %q — frame files missing", w.Name)
 		}
 		log.Printf("config changed for %q — regenerating all frames", w.Name)
 		// Remove stale frames
