@@ -104,7 +104,11 @@ func runGenerator(configPath, inputDir, outputDir string) error {
 		if totalMinutes == 0 {
 			totalMinutes = 60
 		}
-		if err := conv.ConvertFramesTo(r.PNGPaths, outPath, timer, totalMinutes); err != nil {
+		warmupCount := 0
+		if len(r.Workout.Warmup) > 0 {
+			warmupCount = 1
+		}
+		if err := conv.ConvertFramesTo(r.PNGPaths, outPath, timer, totalMinutes, warmupCount); err != nil {
 			log.Printf("convert error for %s: %v", r.Workout.Name, err)
 		}
 	}

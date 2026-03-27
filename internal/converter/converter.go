@@ -122,7 +122,9 @@ func (c *Converter) encodeCycle(inputPath, outputPath string, timerSeconds int) 
 
 // ConvertFramesTo encodes each frame as a timerSeconds-long cycle, then
 // concatenates the frame sequence repeatedly to fill totalMinutes.
-func (c *Converter) ConvertFramesTo(inputPaths []string, outputPath string, timerSeconds, totalMinutes int) error {
+// warmupCount is the number of leading frames that should only appear in the
+// first pass (e.g. 1 when the first frame is the warmup slide).
+func (c *Converter) ConvertFramesTo(inputPaths []string, outputPath string, timerSeconds, totalMinutes, warmupCount int) error {
 	if len(inputPaths) == 0 {
 		return fmt.Errorf("no input frames provided")
 	}
@@ -152,15 +154,25 @@ func (c *Converter) ConvertFramesTo(inputPaths []string, outputPath string, time
 		}
 	}()
 
-	// Each pass through all frames takes len(frames)*timerSeconds seconds.
+	if warmupCount < 0 || warmupCount > len(cycleFiles) {
+		warmupCount = 0
+	}
+	warmupCycles := cycleFiles[:warmupCount]
+	repeatingCycles := cycleFiles[warmupCount:]
+
+	// Each pass through the repeating frames takes len(repeating)*timerSeconds seconds.
+	// Use all frames for duration calculation on the first pass.
 	totalSeconds := totalMinutes * 60
-	frameSetDuration := len(inputPaths) * timerSeconds
-	passes := totalSeconds / frameSetDuration
+	repeatingDuration := len(repeatingCycles) * timerSeconds
+	if repeatingDuration == 0 {
+		repeatingDuration = timerSeconds
+	}
+	passes := totalSeconds / repeatingDuration
 	if passes < 1 {
 		passes = 1
 	}
 
-	if err := c.loopFrames(cycleFiles, outputPath, passes); err != nil {
+	if err := c.loopFrames(warmupCycles, repeatingCycles, outputPath, passes); err != nil {
 		os.Remove(outputPath)
 		return err
 	}
@@ -169,16 +181,21 @@ func (c *Converter) ConvertFramesTo(inputPaths []string, outputPath string, time
 	return nil
 }
 
-// loopFrames stream-copies the cycle files in sequence, repeated `passes` times.
-func (c *Converter) loopFrames(cycleFiles []string, outputPath string, passes int) error {
-	log.Printf("concatenating %d frames × %d passes -> %s", len(cycleFiles), passes, filepath.Base(outputPath))
+// loopFrames stream-copies warmupFiles once (first pass only) followed by
+// repeatingFiles for `passes` passes.
+func (c *Converter) loopFrames(warmupFiles, repeatingFiles []string, outputPath string, passes int) error {
+	log.Printf("concatenating warmup(%d) + %d frames × %d passes -> %s", len(warmupFiles), len(repeatingFiles), passes, filepath.Base(outputPath))
 
 	concatFile := outputPath + ".txt"
 	defer os.Remove(concatFile)
 
 	var sb strings.Builder
+	// Warmup frames appear only on the first pass.
+	for _, cf := range warmupFiles {
+		fmt.Fprintf(&sb, "file '%s'\n", cf)
+	}
 	for i := 0; i < passes; i++ {
-		for _, cf := range cycleFiles {
+		for _, cf := range repeatingFiles {
 			fmt.Fprintf(&sb, "file '%s'\n", cf)
 		}
 	}
