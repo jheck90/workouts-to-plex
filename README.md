@@ -4,7 +4,7 @@ Converts workout plan images into Plex-compatible videos with a countdown timer 
 
 Drop a static image (or define workouts in `workouts.yaml`) and the app generates a looping MP4 with a configurable countdown timer in the corner — perfect for EMOM, AMRAP, or any timed workout format.
 
-![Example workout card highlighting Leg Day exercise](leg_day_1.png)
+![Example workout card highlighting Push Day exercise with warmup tile highlighted](push.jpg)
 
 The app cycles through each exercise, highlighting one at a time every 60 seconds so you always know what's up next. If a warmup is defined, it is highlighted first — then the rotation continues through the workout exercises only for the remainder of the video.
 
@@ -88,3 +88,7 @@ Re-run the container after editing `workouts.yaml` to regenerate the videos. Exi
 - **Configurable Plex naming convention** — the output filename format (`s<year>e<episode> - <Name>.mp4`) and category subdirectory are hardcoded. Expose these as env vars so users can match whatever naming scheme their Plex library expects without rebuilding the container.
 
 - **Per-workout timer duration on the video** — the countdown timer is currently hardcoded to 60 seconds in the FFmpeg filter regardless of the workout's `timer_seconds` value. The overlay should read from the per-workout YAML field so non-60s workouts (e.g. 30s AMRAP, 90s strength intervals) display the correct countdown.
+
+- **Per-round counter** - The videos are intentionally longer than necessary. Add a counter that lets the user know how many loops have passed.
+
+- **Cleanup Logging** - Add various verbosity

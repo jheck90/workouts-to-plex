@@ -81,7 +81,7 @@ func (c *Converter) encodeCycle(inputPath, outputPath string, timerSeconds int) 
 		"drawtext=fontfile=/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf:"+
 			"fontsize=72:fontcolor=white:"+
 			"box=1:boxcolor=black@0.6:boxborderw=10:"+
-			"text='%%{eif\\:%d-t\\:d}':"+
+			"text='%%{eif\\:%d-t-1\\:d}':"+
 			"x=w-tw-30:y=h-th-30",
 		timerSeconds,
 	)

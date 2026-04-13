@@ -124,14 +124,46 @@
     font-weight: 900;
   }
 
-  /* ── Rounds grid ── */
-  .rounds-grid {
-    display: grid;
-    grid-template-columns: repeat({{.Columns}}, 1fr);
+  /* ── Rounds layout ── */
+  .rounds-outer {
+    display: flex;
     gap: 16px;
     flex: 1;
+    min-height: 0;
   }
 
+  /* Left: 2 rows × 4 columns of regular rounds */
+  .rounds-left {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: 1fr 1fr;
+    gap: 16px;
+    flex: 7;
+  }
+
+  /* Right: tall strength panel */
+  .rounds-right {
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .rounds-right .round-heavy {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 36px 32px;
+  }
+
+  /* Empty tile placeholder */
+  .round-empty {
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed #222;
+    border-radius: 10px;
+  }
+
+  /* ── Round tiles ── */
   .round {
     background: rgba(255,255,255,0.04);
     border: 1px solid #2a2a2a;
@@ -165,6 +197,22 @@
     margin-bottom: 12px;
   }
 
+  /* Large movement name in strength panel */
+  .strength-display {
+    font-size: 54px;
+    font-weight: 900;
+    color: #e63946;
+    line-height: 1.1;
+    margin: 14px 0 24px;
+  }
+
+  .strength-sets {
+    font-size: 38px;
+    font-weight: 900;
+    color: #f4a261;
+    margin-bottom: 10px;
+  }
+
   .exercise {
     display: flex;
     align-items: baseline;
@@ -196,6 +244,13 @@
   }
 
   .round-heavy .exercise-note { color: rgba(230,57,70,0.7); }
+
+  /* Strength panel note — no left indent */
+  .rounds-right .exercise-note {
+    font-size: 18px;
+    margin-left: 0;
+    margin-top: 8px;
+  }
 
   /* ── Footer ── */
   .footer {
@@ -241,33 +296,42 @@
   </div>
   {{end}}
 
-  <div class="rounds-grid">
+  <div class="rounds-outer">
 
-    {{if .Heavy}}
-    <div class="round-heavy{{if $.Highlight}}{{if eq $.Highlight "1"}} active{{else}} dimmed{{end}}{{end}}">
-      <div class="round-label">Strength · Min 1</div>
-      <div class="round-number">1</div>
-      <div class="exercise">
-        <div class="exercise-reps">{{.Heavy.Sets}}×{{.Heavy.Reps}}</div>
-        <div class="exercise-name">{{.Heavy.Movement}}</div>
+    <!-- Left: 2 rows × 4 columns of regular rounds (always 8 slots) -->
+    <div class="rounds-left">
+      {{range .PaddedRounds}}
+      {{if .}}
+      <div class="round{{if $.Highlight}}{{if eq $.Highlight (printf "%d" .Minute)}} active{{else}} dimmed{{end}}{{end}}">
+        <div class="round-label">Minute</div>
+        <div class="round-number">{{.Minute}}</div>
+        {{range .Exercises}}
+        <div class="exercise">
+          <div class="exercise-reps">{{.Reps}}</div>
+          <div class="exercise-name">{{.Movement}}</div>
+        </div>
+        {{if .Note}}<div class="exercise-note">{{.Note}}</div>{{end}}
+        {{end}}
       </div>
-      {{if .Heavy.Note}}<div class="exercise-note">{{.Heavy.Note}}</div>{{end}}
-    </div>
-    {{end}}
-
-    {{range .Rounds}}
-    <div class="round{{if $.Highlight}}{{if eq $.Highlight (printf "%d" .Minute)}} active{{else}} dimmed{{end}}{{end}}">
-      <div class="round-label">Minute</div>
-      <div class="round-number">{{.Minute}}</div>
-      {{range .Exercises}}
-      <div class="exercise">
-        <div class="exercise-reps">{{.Reps}}</div>
-        <div class="exercise-name">{{.Movement}}</div>
-      </div>
-      {{if .Note}}<div class="exercise-note">{{.Note}}</div>{{end}}
+      {{else}}
+      <div class="round-empty"></div>
+      {{end}}
       {{end}}
     </div>
-    {{end}}
+
+    <!-- Right: tall strength panel -->
+    <div class="rounds-right">
+      {{if .Heavy}}
+      <div class="round-heavy{{if $.Highlight}}{{if eq $.Highlight "strength"}} active{{else}} dimmed{{end}}{{end}}">
+        <div class="round-label">Strength</div>
+        <div class="strength-display">{{.Heavy.Movement}}</div>
+        <div class="strength-sets">{{.Heavy.Sets}}×{{.Heavy.Reps}}</div>
+        {{if .Heavy.Note}}<div class="exercise-note">{{.Heavy.Note}}</div>{{end}}
+      </div>
+      {{else}}
+      <div class="round-empty"></div>
+      {{end}}
+    </div>
 
   </div>
 

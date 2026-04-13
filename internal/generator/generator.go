@@ -71,7 +71,8 @@ type templateData struct {
 	Warmup       []string
 	Heavy        *Heavy
 	Rounds       []Round
-	Highlight    string // "warmup", "1", "2", "3", ... — active slide
+	PaddedRounds []*Round // always 8 entries, nil = empty tile
+	Highlight    string   // "warmup", "1", "2", "3", ... — active slide
 }
 
 // --- Generator ---
@@ -197,6 +198,13 @@ func (g *Generator) renderFrame(s Settings, w Workout, slug, highlight string, r
 	if timer == 0 {
 		timer = 60
 	}
+	padded := make([]*Round, 8)
+	for i, r := range w.Rounds {
+		if i < 8 {
+			rc := r
+			padded[i] = &rc
+		}
+	}
 	data := templateData{
 		Name:         w.Name,
 		Subtitle:     w.Subtitle,
@@ -208,6 +216,7 @@ func (g *Generator) renderFrame(s Settings, w Workout, slug, highlight string, r
 		Warmup:       w.Warmup,
 		Heavy:        w.Heavy,
 		Rounds:       w.Rounds,
+		PaddedRounds: padded,
 		Highlight:    highlight,
 	}
 
@@ -243,17 +252,37 @@ func (g *Generator) renderFrame(s Settings, w Workout, slug, highlight string, r
 }
 
 // frameHighlights returns the ordered list of highlight keys for a workout.
+// Heavy fires after the first 4 non-empty rounds (or all rounds if fewer than 4),
+// then remaining rounds follow. Empty rounds (no exercises) are skipped.
 func frameHighlights(w Workout) []string {
 	var h []string
 	if len(w.Warmup) > 0 {
 		h = append(h, "warmup")
 	}
-	if w.Heavy != nil {
-		h = append(h, "1")
-	}
+
+	// Collect non-empty round keys in order
+	var populated []string
 	for _, r := range w.Rounds {
-		h = append(h, fmt.Sprintf("%d", r.Minute))
+		if len(r.Exercises) > 0 {
+			populated = append(populated, fmt.Sprintf("%d", r.Minute))
+		}
 	}
+
+	// Split at 4: first half → heavy → second half
+	splitAt := 4
+	if len(populated) < splitAt {
+		splitAt = len(populated)
+	}
+	h = append(h, populated[:splitAt]...)
+	if w.Heavy != nil {
+		h = append(h, "strength")
+	}
+	h = append(h, populated[splitAt:]...)
+	// Fire strength again at the end so the cycle closes: R1–4 → strength → R5–8 → strength → (repeat)
+	if w.Heavy != nil && len(populated) > splitAt {
+		h = append(h, "strength")
+	}
+
 	return h
 }
 

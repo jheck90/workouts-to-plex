@@ -49,11 +49,11 @@ workouts:
     notes: "Rest for remaining time each minute. Repeat 5-min cycle × 4 = 20 minutes."
 
   - name: "Pull Day"
-    subtitle: "5-Min EMOM × 4 Rounds"
+    subtitle: "9-Min EMOM × Rounds"
     category: "EMOM"
     episode: 2
     timer_seconds: 60
-    total_minutes: 60
+    total_minutes: 63
     warmup:
       - "10x Band pull-aparts"
       - "10x Face pulls (light)"
@@ -67,22 +67,36 @@ workouts:
     rounds:
       - minute: 2
         exercises:
-          - movement: "Pull-Ups"
-            reps: 8
+          - movement: "Jump Rope"
+            reps: 50
+            note: "doubles or 100 singles"
       - minute: 3
         exercises:
-          - movement: "DB Rows"
-            reps: 12
-            note: "each arm"
+          - movement: "Pull Ups"
+            reps: 8
       - minute: 4
+        exercises:
+          - movement: "Single Arm Row"
+            reps: 10
+            note: "each arm"
+      - minute: 5
+        exercises:
+          - movement: "Jump Rope"
+            reps: 50
+            note: "doubles or 100 singles"
+      - minute: 6
+        exercises:
+          - movement: "Chin Ups"
+            reps: 8
+      - minute: 7
+        exercises:
+          - movement: "DB Rear Flyes"
+            reps: 12
+      - minute: 8
         exercises:
           - movement: "Face Pulls"
             reps: 15
-      - minute: 5
-        exercises:
-          - movement: "Hammer Curls"
-            reps: 10
-    notes: "Rest for remaining time each minute. Repeat 5-min cycle × 4 = 20 minutes."
+    notes: "Rounds 1–4 → Barbell Row → Rounds 5–7. Rest remaining time each minute."
 
   - name: "Leg Day"
     subtitle: "5-Min EMOM × 4 Rounds"
@@ -119,3 +133,264 @@ workouts:
           - movement: "Box Jumps"
             reps: 10
     notes: "Rest for remaining time each minute. Repeat 5-min cycle × 4 = 20 minutes."
+
+  - name: "Core & Conditioning"
+    subtitle: "5-Min EMOM × 4 Rounds"
+    category: "EMOM"
+    episode: 4
+    timer_seconds: 60
+    total_minutes: 60
+    warmup:
+      - "30s Dead bug holds"
+      - "10x Cat-cow stretches"
+      - "10x Hip flexor pulses (each side)"
+      - "20s Plank hold"
+    heavy:
+      movement: "Hanging Leg Raises"
+      sets: 1
+      reps: "10"
+      note: "Controlled tempo, full range"
+    rounds:
+      - minute: 2
+        exercises:
+          - movement: "Ab Wheel Rollouts"
+            reps: 10
+      - minute: 3
+        exercises:
+          - movement: "Russian Twists"
+            reps: 20
+            note: "each side, weighted"
+      - minute: 4
+        exercises:
+          - movement: "Hollow Body Hold"
+            reps: 30
+            note: "seconds"
+      - minute: 5
+        exercises:
+          - movement: "Mountain Climbers"
+            reps: 20
+            note: "each leg"
+    notes: "Rest for remaining time each minute. Repeat 5-min cycle × 4 = 20 minutes."
+
+  - name: "Upper Body Strength"
+    subtitle: "5×5 Strength Block"
+    category: "Strength"
+    episode: 5
+    timer_seconds: 300
+    total_minutes: 60
+    warmup:
+      - "5 min easy cardio"
+      - "2×10 empty-bar bench press"
+      - "2×10 empty-bar overhead press"
+      - "10x Band pull-aparts"
+    heavy:
+      movement: "Bench Press"
+      sets: 5
+      reps: "5"
+      note: "@ 80–85% 1RM — 3 min rest"
+    rounds:
+      - minute: 2
+        exercises:
+          - movement: "Barbell Row"
+            reps: 5
+            note: "@ 75–80% 1RM — 3 min rest"
+      - minute: 3
+        exercises:
+          - movement: "Overhead Press"
+            reps: 5
+            note: "@ 75–80% 1RM — 3 min rest"
+      - minute: 4
+        exercises:
+          - movement: "Weighted Pull-Ups"
+            reps: 5
+            note: "add weight if bodyweight is easy"
+      - minute: 5
+        exercises:
+          - movement: "DB Incline Press"
+            reps: 8
+            note: "3×8 @ moderate weight"
+    notes: "Focus on heavy compound lifts. Full rest between sets. Log weights each session."
+
+  - name: "Full Body EMOM"
+    subtitle: "6-Min EMOM × 3 Rounds"
+    category: "EMOM"
+    episode: 6
+    timer_seconds: 60
+    total_minutes: 60
+    warmup:
+      - "5x Inchworms"
+      - "10x World's greatest stretch (each side)"
+      - "10x Bodyweight squats"
+      - "10x Push-ups"
+    heavy:
+      movement: "Deadlift"
+      sets: 1
+      reps: "3"
+      note: "@ 85% 1RM"
+    rounds:
+      - minute: 2
+        exercises:
+          - movement: "Push-Ups"
+            reps: 15
+      - minute: 3
+        exercises:
+          - movement: "Goblet Squats"
+            reps: 12
+      - minute: 4
+        exercises:
+          - movement: "DB Rows"
+            reps: 10
+            note: "each arm"
+      - minute: 5
+        exercises:
+          - movement: "Box Jumps"
+            reps: 8
+      - minute: 6
+        exercises:
+          - movement: "Plank"
+            reps: 45
+            note: "seconds"
+    notes: "Rest for remaining time each minute. Repeat 6-min cycle × 3 = 18 minutes."
+
+  - name: "Shoulders & Arms"
+    subtitle: "5-Min EMOM × 4 Rounds"
+    category: "EMOM"
+    episode: 7
+    timer_seconds: 60
+    total_minutes: 60
+    warmup:
+      - "10x Arm circles (each direction)"
+      - "10x Band pull-aparts"
+      - "10x Face pulls (light)"
+      - "10x Wrist circles"
+    heavy:
+      movement: "Overhead Press"
+      sets: 1
+      reps: "3"
+      note: "@ 80–85% 1RM"
+    rounds:
+      - minute: 2
+        exercises:
+          - movement: "Arnold Press"
+            reps: 10
+      - minute: 3
+        exercises:
+          - movement: "Barbell Curls"
+            reps: 10
+      - minute: 4
+        exercises:
+          - movement: "Skull Crushers"
+            reps: 12
+      - minute: 5
+        exercises:
+          - movement: "Lateral Raises"
+            reps: 15
+    notes: "Rest for remaining time each minute. Repeat 5-min cycle × 4 = 20 minutes."
+
+  - name: "Posterior Chain"
+    subtitle: "5-Min EMOM × 4 Rounds"
+    category: "EMOM"
+    episode: 8
+    timer_seconds: 60
+    total_minutes: 60
+    warmup:
+      - "10x Hip hinges (empty bar)"
+      - "10x Glute bridges"
+      - "10x Good mornings (empty bar)"
+      - "30s Pigeon stretch (each side)"
+    heavy:
+      movement: "Romanian Deadlift"
+      sets: 1
+      reps: "5"
+      note: "@ 75–80% 1RM"
+    rounds:
+      - minute: 2
+        exercises:
+          - movement: "Glute Ham Raises"
+            reps: 10
+      - minute: 3
+        exercises:
+          - movement: "KB Swings"
+            reps: 15
+      - minute: 4
+        exercises:
+          - movement: "Good Mornings"
+            reps: 10
+            note: "moderate weight"
+      - minute: 5
+        exercises:
+          - movement: "Banded Hip Thrusts"
+            reps: 20
+    notes: "Rest for remaining time each minute. Repeat 5-min cycle × 4 = 20 minutes."
+
+  - name: "Cardio Conditioning"
+    subtitle: "4-Min EMOM × 5 Rounds"
+    category: "EMOM"
+    episode: 9
+    timer_seconds: 60
+    total_minutes: 60
+    warmup:
+      - "5 min easy jog or row"
+      - "10x High knees (each leg)"
+      - "10x Butt kicks (each leg)"
+      - "10x Jumping jacks"
+    heavy:
+      movement: "Assault Bike Sprint"
+      sets: 1
+      reps: "15"
+      note: "calories — all out effort"
+    rounds:
+      - minute: 2
+        exercises:
+          - movement: "Burpees"
+            reps: 10
+      - minute: 3
+        exercises:
+          - movement: "Jump Rope"
+            reps: 50
+            note: "double-unders or 100 singles"
+      - minute: 4
+        exercises:
+          - movement: "Rowing Sprints"
+            reps: 200
+            note: "meters"
+    notes: "Rest for remaining time each minute. Repeat 4-min cycle × 5 = 20 minutes."
+
+  - name: "Lower Body Strength"
+    subtitle: "5×5 Strength Block"
+    category: "Strength"
+    episode: 10
+    timer_seconds: 300
+    total_minutes: 60
+    warmup:
+      - "5 min easy bike or row"
+      - "2×10 bodyweight squats"
+      - "2×10 empty-bar squats"
+      - "10x Hip circles (each direction)"
+    heavy:
+      movement: "Back Squat"
+      sets: 5
+      reps: "5"
+      note: "@ 80–85% 1RM — 3 min rest"
+    rounds:
+      - minute: 2
+        exercises:
+          - movement: "Romanian Deadlift"
+            reps: 5
+            note: "@ 75–80% 1RM — 3 min rest"
+      - minute: 3
+        exercises:
+          - movement: "Leg Press"
+            reps: 8
+            note: "@ 80% max — 2 min rest"
+      - minute: 4
+        exercises:
+          - movement: "Bulgarian Split Squats"
+            reps: 6
+            note: "each leg — heavy DB"
+      - minute: 5
+        exercises:
+          - movement: "Nordic Hamstring Curls"
+            reps: 6
+            note: "3×6 — slow eccentric"
+    notes: "Focus on heavy compound lifts. Full rest between sets. Log weights each session."
