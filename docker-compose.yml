@@ -6,3 +6,4 @@ services:
       - ./workouts.yaml:/config/workouts.yaml    # workout definitions
       - ./images:/input                          # generated PNGs land here (intermediate)
       - ./plex:/output                           # point Plex library at this directory
+      - /mnt/nfs-share/media/youtube:/exercises:ro  # exercise demo library (optional; required for video: fields in workouts.yaml)

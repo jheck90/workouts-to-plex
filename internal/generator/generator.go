@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -45,11 +46,13 @@ type Heavy struct {
 	Sets     int    `yaml:"sets"`
 	Reps     string `yaml:"reps"`
 	Note     string `yaml:"note"`
+	Video    string `yaml:"video,omitempty"` // abs path inside container to a demo MP4; injected into first pass only
 }
 
 type Round struct {
 	Minute    int        `yaml:"minute"`
 	Exercises []Exercise `yaml:"exercises"`
+	Video     string     `yaml:"video,omitempty"` // abs path inside container to a demo MP4; injected into first EMOM pass only
 }
 
 type Exercise struct {
@@ -75,14 +78,25 @@ type templateData struct {
 	Highlight    string   // "warmup", "1", "2", "3", ... — active slide
 }
 
+// CacheStatus describes whether a workout's frames are up-to-date.
+type CacheStatus struct {
+	Name    string
+	Episode int
+	Changed bool // true = hash mismatch or missing frames; will be regenerated
+}
+
 // --- Generator ---
 
 type Generator struct {
 	outputDir string
 	tmpl      *template.Template
+	logOutput io.Writer
 }
 
-func New(outputDir string) (*Generator, error) {
+func New(outputDir string, logOutput io.Writer) (*Generator, error) {
+	if logOutput == nil {
+		logOutput = io.Discard
+	}
 	tmplPath := filepath.Join(filepath.Dir(os.Args[0]), "template.html")
 	if _, err := os.Stat(tmplPath); err != nil {
 		tmplPath = "/app/template.html"
@@ -96,7 +110,35 @@ func New(outputDir string) (*Generator, error) {
 	return &Generator{
 		outputDir: outputDir,
 		tmpl:      tmpl,
+		logOutput: logOutput,
 	}, nil
+}
+
+// PrecheckAll performs a hash-and-file check for every workout without generating
+// anything, so the caller can display a status table before work begins.
+func (g *Generator) PrecheckAll(cfg *Config) []CacheStatus {
+	var out []CacheStatus
+	for _, w := range cfg.Workouts {
+		slug := fmt.Sprintf("%s_ep%d", slugify(w.Name), w.Episode)
+		hash := workoutHash(cfg.Settings, w)
+		hashPath := filepath.Join(g.outputDir, slug+".sha256")
+		changed := true
+		if stored, err := os.ReadFile(hashPath); err == nil {
+			if strings.TrimSpace(string(stored)) == hash {
+				highlights := FrameHighlights(w)
+				allExist := true
+				for _, h := range highlights {
+					if _, err := os.Stat(filepath.Join(g.outputDir, slug+"_"+h+".png")); err != nil {
+						allExist = false
+						break
+					}
+				}
+				changed = !allExist
+			}
+		}
+		out = append(out, CacheStatus{Name: w.Name, Episode: w.Episode, Changed: changed})
+	}
+	return out
 }
 
 func LoadConfig(path string) (*Config, error) {
@@ -116,6 +158,7 @@ func LoadConfig(path string) (*Config, error) {
 type GenerateResult struct {
 	PNGPaths    []string // ordered: warmup, min1, min2, ...
 	Workout     Workout
+	Settings    Settings
 	Regenerated bool
 }
 
@@ -128,7 +171,7 @@ func (g *Generator) GenerateAll(cfg *Config) ([]GenerateResult, error) {
 			log.Printf("failed to generate %q: %v", w.Name, err)
 			continue
 		}
-		results = append(results, GenerateResult{PNGPaths: paths, Workout: w, Regenerated: regen})
+		results = append(results, GenerateResult{PNGPaths: paths, Workout: w, Settings: cfg.Settings, Regenerated: regen})
 	}
 	return results, nil
 }
@@ -140,7 +183,7 @@ func (g *Generator) GenerateFrames(s Settings, w Workout) ([]string, bool, error
 	hashPath := filepath.Join(g.outputDir, slug+".sha256")
 	hash := workoutHash(s, w)
 
-	highlights := frameHighlights(w)
+	highlights := FrameHighlights(w)
 
 	// Check stored hash — if unchanged and all frame files exist, skip regeneration
 	if storedHash, err := os.ReadFile(hashPath); err == nil {
@@ -241,8 +284,8 @@ func (g *Generator) renderFrame(s Settings, w Workout, slug, highlight string, r
 		fmt.Sprintf("--screenshot=%s", pngPath),
 		"file://"+htmlPath,
 	)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = g.logOutput
+	cmd.Stderr = g.logOutput
 
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("chromium screenshot failed for frame %s: %w", highlight, err)
@@ -251,10 +294,10 @@ func (g *Generator) renderFrame(s Settings, w Workout, slug, highlight string, r
 	return pngPath, nil
 }
 
-// frameHighlights returns the ordered list of highlight keys for a workout.
+// FrameHighlights returns the ordered list of highlight keys for a workout.
 // Heavy fires after the first 4 non-empty rounds (or all rounds if fewer than 4),
 // then remaining rounds follow. Empty rounds (no exercises) are skipped.
-func frameHighlights(w Workout) []string {
+func FrameHighlights(w Workout) []string {
 	var h []string
 	if len(w.Warmup) > 0 {
 		h = append(h, "warmup")

@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,39 +14,47 @@ import (
 	"github.com/jheck90/workouts-to-plex/internal/converter"
 	"github.com/jheck90/workouts-to-plex/internal/generator"
 	"github.com/jheck90/workouts-to-plex/internal/plex"
+	"github.com/jheck90/workouts-to-plex/internal/ui"
 )
 
 func main() {
 	configPath := getEnv("CONFIG_PATH", "/config/workouts.yaml")
-	inputDir := getEnv("INPUT_DIR", "/input")
-	outputDir := getEnv("OUTPUT_DIR", "/output")
+	inputDir   := getEnv("INPUT_DIR", "/input")
+	outputDir  := getEnv("OUTPUT_DIR", "/output")
+	verbose    := getEnv("VERBOSE", "") == "true"
 
-	log.Printf("workouts-to-plex starting")
-	log.Printf("  config: %s", configPath)
-	log.Printf("  input:  %s", inputDir)
-	log.Printf("  output: %s", outputDir)
+	ui.SetVerbose(verbose)
+
+	var logOut io.Writer = io.Discard
+	if verbose {
+		logOut = os.Stderr
+	}
+
+	fmt.Println("workouts-to-plex")
 
 	// generatedFrames tracks PNGs written by the generator so the watcher and
 	// processExisting don't re-convert them as standalone videos.
 	generatedFrames := map[string]bool{}
 
-	// --- Generate images from workouts.yaml ---
 	if _, err := os.Stat(configPath); err == nil {
-		frames, err := runGenerator(configPath, inputDir, outputDir)
+		frames, err := runGenerator(configPath, inputDir, outputDir, logOut)
 		if err != nil {
-			log.Printf("generator error: %v", err)
+			fmt.Fprintf(os.Stderr, "generator error: %v\n", err)
 		}
 		for _, p := range frames {
 			generatedFrames[filepath.Clean(p)] = true
 		}
 	} else {
-		log.Printf("no config found at %s, skipping generation step", configPath)
+		fmt.Fprintf(os.Stderr, "no config found at %s, skipping generation step\n", configPath)
 	}
 
-	// --- Convert any manually dropped images to video ---
-	conv := converter.New(outputDir)
-
+	conv := converter.New(outputDir, logOut)
 	processExisting(inputDir, conv, generatedFrames)
+
+	if getEnv("BATCH_MODE", "") == "true" {
+		fmt.Println("done.")
+		return
+	}
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -83,34 +93,46 @@ func main() {
 
 // runGenerator generates frame PNGs and converts them to Plex MP4s.
 // Returns the paths of all frame PNGs that were written to inputDir.
-func runGenerator(configPath, inputDir, outputDir string) ([]string, error) {
+func runGenerator(configPath, inputDir, outputDir string, logOut io.Writer) ([]string, error) {
 	cfg, err := generator.LoadConfig(configPath)
 	if err != nil {
 		return nil, err
 	}
 
-	gen, err := generator.New(inputDir)
+	gen, err := generator.New(inputDir, logOut)
 	if err != nil {
 		return nil, err
 	}
 
-	conv := converter.New(outputDir)
+	// Pre-check cache status and show the workout table before any work starts.
+	statuses := gen.PrecheckAll(cfg)
+	uiStatuses := make([]ui.WorkoutStatus, len(statuses))
+	for i, s := range statuses {
+		uiStatuses[i] = ui.WorkoutStatus{Name: s.Name, Episode: s.Episode, Regenerated: s.Changed}
+	}
+	ui.PrintTable(uiStatuses)
+
+	conv := converter.New(outputDir, logOut)
 
 	results, err := gen.GenerateAll(cfg)
 	if err != nil {
 		return nil, err
 	}
 
+	disp := ui.NewDisplay(len(results))
+
 	var allFrames []string
 	year := time.Now().Year()
 	for _, r := range results {
 		allFrames = append(allFrames, r.PNGPaths...)
+
 		outPath := plexOutputPath(outputDir, r.Workout, year)
 		if r.Regenerated {
 			if err := os.Remove(outPath); err == nil {
 				log.Printf("removed stale MP4: %s", filepath.Base(outPath))
 			}
 		}
+
 		timer := r.Workout.TimerSeconds
 		if timer == 0 {
 			timer = 60
@@ -124,14 +146,55 @@ func runGenerator(configPath, inputDir, outputDir string) ([]string, error) {
 			warmupCount = 1
 		}
 
-		warmupChapters, repeatingChapters := buildChapters(r.Workout, warmupCount)
-
-		if err := conv.ConvertFramesTo(r.PNGPaths, outPath, timer, totalMinutes, warmupCount, warmupChapters, repeatingChapters); err != nil {
-			log.Printf("convert error for %s: %v", r.Workout.Name, err)
-			continue
+		// Build FrameInput slice: correlate each PNG with its demo video (if any).
+		// Warmup frames never carry a video. Strength and round frames use the
+		// video path from Heavy.Video and Round.Video respectively.
+		highlights := generator.FrameHighlights(r.Workout)
+		frameInputs := make([]converter.FrameInput, len(r.PNGPaths))
+		for i, png := range r.PNGPaths {
+			fi := converter.FrameInput{PNGPath: png}
+			if i >= warmupCount && i < len(highlights) {
+				h := highlights[i]
+				switch h {
+				case "strength":
+					if r.Workout.Heavy != nil {
+						fi.VideoPath = r.Workout.Heavy.Video
+					}
+				default:
+					if min, err := strconv.Atoi(h); err == nil {
+						for _, round := range r.Workout.Rounds {
+							if round.Minute == min && round.Video != "" {
+								fi.VideoPath = round.Video
+								break
+							}
+						}
+					}
+				}
+			}
+			frameInputs[i] = fi
 		}
 
-		// Plex metadata: NFO description + thumbnails.
+		w := r.Settings.Width
+		h := r.Settings.Height
+		if w == 0 {
+			w = 1920
+		}
+		if h == 0 {
+			h = 1080
+		}
+
+		warmupChapters, repeatingChapters := buildChapters(r.Workout, warmupCount)
+
+		disp.StartWorkout(r.Workout.Name, len(r.PNGPaths))
+		if err := conv.ConvertFramesTo(frameInputs, outPath, timer, totalMinutes, warmupCount, w, h, warmupChapters, repeatingChapters, func() {
+			disp.FrameDone()
+		}); err != nil {
+			log.Printf("convert error for %s: %v", r.Workout.Name, err)
+			disp.WorkoutDone()
+			continue
+		}
+		disp.WorkoutDone()
+
 		if err := plex.WriteNFO(outPath, r.Workout, year); err != nil {
 			log.Printf("NFO error for %s: %v", r.Workout.Name, err)
 		}
@@ -145,6 +208,8 @@ func runGenerator(configPath, inputDir, outputDir string) ([]string, error) {
 			}
 		}
 	}
+	disp.Finish()
+
 	return allFrames, nil
 }
 
@@ -155,7 +220,7 @@ func buildChapters(w generator.Workout, warmupCount int) (warmup []converter.Cha
 	}
 	if w.Heavy != nil {
 		repeating = append(repeating, converter.Chapter{
-			Title: fmt.Sprintf("Min 1: %s", w.Heavy.Movement),
+			Title: fmt.Sprintf("Strength: %s", w.Heavy.Movement),
 		})
 	}
 	for _, r := range w.Rounds {

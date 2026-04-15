@@ -13,6 +13,7 @@ import (
 type episodeDetails struct {
 	XMLName   xml.Name  `xml:"episodedetails"`
 	Title     string    `xml:"title"`
+	Tagline   string    `xml:"tagline,omitempty"`
 	ShowTitle string    `xml:"showtitle"`
 	Season    int       `xml:"season"`
 	Episode   int       `xml:"episode"`
@@ -33,6 +34,7 @@ func WriteNFO(outputPath string, w generator.Workout, year int) error {
 
 	details := episodeDetails{
 		Title:     w.Name,
+		Tagline:   w.Subtitle,
 		ShowTitle: w.Category,
 		Season:    year,
 		Episode:   w.Episode,
@@ -62,7 +64,7 @@ func buildPlot(w generator.Workout) string {
 	}
 
 	if w.Heavy != nil {
-		sb.WriteString(fmt.Sprintf("MIN 1 — %s: %d×%s", w.Heavy.Movement, w.Heavy.Sets, w.Heavy.Reps))
+		sb.WriteString(fmt.Sprintf("STRENGTH — %s: %d×%s", w.Heavy.Movement, w.Heavy.Sets, w.Heavy.Reps))
 		if w.Heavy.Note != "" {
 			sb.WriteString("  " + w.Heavy.Note)
 		}

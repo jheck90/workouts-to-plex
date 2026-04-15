@@ -24,9 +24,10 @@ workouts.yaml → HTML template → Chromium screenshot → PNG → FFmpeg → M
 
 | Path | Purpose |
 |------|---------|
-| `/workouts.yaml` | Workout definitions (see below) |
+| `/config/workouts.yaml` | Workout definitions (see below) |
 | `/input` | Intermediate PNGs — auto-generated, or drop your own images here |
 | `/output` | Plex media library — point your Plex library at this directory |
+| `/exercises` | *(Optional)* Exercise demo video library — required if any round uses the `video:` field |
 
 ## Quick start
 
@@ -52,12 +53,15 @@ workouts:
   - name: "20 Min EMOM"
     subtitle: "Every Minute On the Minute"
     timer_seconds: 60
-    theme: dark
     rounds:
       - minute: 1
         exercises:
           - movement: "Burpees"
             reps: 10
+        # Optional: path to a demo video inside the container (requires /exercises volume).
+        # On the first EMOM cycle only, the tile highlights for 3s, cuts to the demo video,
+        # then returns to the tile. Subsequent loops show the plain tile. Timer runs continuously.
+        video: "/exercises/Exercise Library - Push/Season 2020/s2020e031300 - Eccentric Push Up - OPEX Exercise Library.mp4"
       - minute: 2
         exercises:
           - movement: "Air Squats"
@@ -74,21 +78,28 @@ Re-run the container after editing `workouts.yaml` to regenerate the videos. Exi
 | `CONFIG_PATH` | `/workouts.yaml` | Path to workout definitions file |
 | `INPUT_DIR` | `/input` | Directory to watch for new images |
 | `OUTPUT_DIR` | `/output` | Directory to write MP4s into |
+| `BATCH_MODE` | `false` | Exit after processing instead of watching for new files |
+| `VERBOSE` | `false` | Show internal logs and FFmpeg output |
 
 ## Roadmap / TODO
 
-- **Cleanup intermediate files** — temp `.mp4` cycle files and intermediate frame PNGs are left on disk after conversion. Add a cleanup pass to remove them once the final output MP4 is written.
+- [x] **Cleanup intermediate files** — temp `.mp4` cycle files and intermediate frame PNGs are left on disk after conversion. Add a cleanup pass to remove them once the final output MP4 is written.
 
-- **Batch job mode** — the app currently runs as a long-lived service (watching `/input` for new files) even though the actual work is a one-shot generation step. Convert to a batch/run-once mode so it exits cleanly after processing and doesn't hold resources. A sidecar watcher or a simple cron trigger could handle the "new file" case separately.
+- [x] **Batch job mode** — the app currently runs as a long-lived service (watching `/input` for new files) even though the actual work is a one-shot generation step. Convert to a batch/run-once mode so it exits cleanly after processing and doesn't hold resources. A sidecar watcher or a simple cron trigger could handle the "new file" case separately.
 
-- **AI workout generation via remote trigger** — add a Claude-backed prompt wrapper so users can describe a workout in plain English (e.g. "give me a 5-min upper body EMOM") and have it generate the `workouts.yaml` entry, trigger the job, and produce the video. Could be exposed as a Claude remote trigger endpoint, a small HTTP API, or a CLI flag.
+- [ ] **AI workout generation via remote trigger** — add a Claude-backed prompt wrapper so users can describe a workout in plain English (e.g. "give me a 5-min upper body EMOM") and have it generate the `workouts.yaml` entry, trigger the job, and produce the video. Could be exposed as a Claude remote trigger endpoint, a small HTTP API, or a CLI flag.
 
-- **Discord integration** — notify a Discord channel when new media is ready in Plex, and/or accept slash commands from Discord to trigger workout generation (feeding into the AI wrapper above). Closes the loop: ask for a workout in Discord → Claude generates it → job runs → Discord confirms it's in Plex.
+- [ ] **Discord integration** — notify a Discord channel when new media is ready in Plex, and/or accept slash commands from Discord to trigger workout generation (feeding into the AI wrapper above). Closes the loop: ask for a workout in Discord → Claude generates it → job runs → Discord confirms it's in Plex.
 
-- **Configurable Plex naming convention** — the output filename format (`s<year>e<episode> - <Name>.mp4`) and category subdirectory are hardcoded. Expose these as env vars so users can match whatever naming scheme their Plex library expects without rebuilding the container.
+- [ ] **Configurable Plex naming convention** — the output filename format (`s<year>e<episode> - <Name>.mp4`) and category subdirectory are hardcoded. Expose these as env vars so users can match whatever naming scheme their Plex library expects without rebuilding the container.
 
-- **Per-workout timer duration on the video** — the countdown timer is currently hardcoded to 60 seconds in the FFmpeg filter regardless of the workout's `timer_seconds` value. The overlay should read from the per-workout YAML field so non-60s workouts (e.g. 30s AMRAP, 90s strength intervals) display the correct countdown.
+- [ ] **Per-workout timer duration on the video** — the countdown timer is currently hardcoded to 60 seconds in the FFmpeg filter regardless of the workout's `timer_seconds` value. The overlay should read from the per-workout YAML field so non-60s workouts (e.g. 30s AMRAP, 90s strength intervals) display the correct countdown.
 
-- **Per-round counter** - The videos are intentionally longer than necessary. Add a counter that lets the user know how many loops have passed.
+- [ ] **Per-round counter** - The videos are intentionally longer than necessary. Add a counter that lets the user know how many loops have passed.
 
-- **Cleanup Logging** - Add various verbosity
+- [x] **Cleanup Logging** - Suppress all internal/FFmpeg output by default; set `VERBOSE=true` to restore. Clean pre-run workout table (cached vs regenerating) and live two-line progress display (per-workout frame bar + overall bar).
+- - [ ] **Add timestamps** - I want to be able to track how long it takes
+
+- [ ] **Persistent workout storage** — `workouts.yaml` works for static definitions but becomes unwieldy as the library grows: no easy way to add/edit/delete individual workouts, track changes over time, or support a UI. Worth exploring a proper backend — PostgreSQL is a natural fit given it's already in the stack, with workouts, rounds, and exercises mapping cleanly to relational tables. The app would query the DB at run time instead of reading a flat file, and a small admin UI (or even just `pgweb`) could replace manual YAML editing.
+
+- [x] **Exercise video overlays** — add a `video:` field to each round in `workouts.yaml`. On the first EMOM pass, each highlighted tile shows for 3s, cuts to the demo video (scaled to output resolution, audio muted), then returns to the tile for the remainder of the minute. Timer runs continuously. Subsequent loops show plain tiles. Mount your video library at `/exercises` to enable.
